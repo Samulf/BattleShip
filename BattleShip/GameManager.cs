@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -146,12 +147,50 @@ namespace BattleShipServer
         private string Read(string command)
         {
             string Answer = "";
+            string com1 =   "";
+            string targ =   "";
+
+            try
+            {
+                com1 = command.Split(" ")[0];
+                targ = command.Split(" ")[1];
+            }
+            catch (Exception)
+            {
+                Answer = "500 Syntax error - unknown command.";
+                return Answer;
+            }
 
             WriteColor(!IsHost, $"{Player2}: {command}");
 
             if (string.Equals(command, "QUIT", StringComparison.InvariantCultureIgnoreCase))
             {
                 Answer = "You want to quit.";
+            }
+            else if (string.Equals(com1, "FIRE", StringComparison.InvariantCultureIgnoreCase))
+            {
+                var target = OceanView.Targets.Where(t => t.GridPosition == targ.ToUpper()).FirstOrDefault();
+                if(target != null)
+                {
+                    if (target.IsAlreadyHit)
+                    {
+                        Answer = $"501 - target already hit ({targ})";
+                    } 
+
+                    else if (target.HasShip)
+                    {
+                        var isSunk = target.Ship.Hit();
+
+                        if (isSunk)
+                        {
+                            Answer = target.Ship.SinkString;
+                        }
+                        else
+                        {
+                            Answer = target.Ship.HitString;
+                        }
+                    }
+                }
             }
 
             else if (string.Equals(command, "FIRE G6", StringComparison.InvariantCultureIgnoreCase))
@@ -210,7 +249,7 @@ namespace BattleShipServer
             }
             catch (SocketException ex)
             {
-                Console.WriteLine("Misslyckades att öppna socket. Troligtvis upptagen.");
+                Console.WriteLine($"Misslyckades att öppna socket. Troligtvis upptagen. {ex.Message}");
                 Environment.Exit(1);
             }
         }
