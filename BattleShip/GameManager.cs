@@ -10,6 +10,7 @@ namespace BattleShipServer
     class GameManager
     {
         public string       Username  { get; set; }
+        public string       Player2   { get; set; }
         public bool         IsHost    { get; set; }
         public string       Host      { get; set; }
         public int          Port      { get; set; }
@@ -52,8 +53,6 @@ namespace BattleShipServer
                 Console.ReadLine();             
             }
             Connect();
-            Console.WriteLine("Spela?");
-            Console.ReadKey();
             Play();
         }
 
@@ -65,10 +64,25 @@ namespace BattleShipServer
                 {
                     Console.WriteLine("Väntar på att någon ska ansluta sig...");
                     Client = listener.AcceptTcpClient();
+                    NetworkStream = Client.GetStream();
+                    reader = new StreamReader(NetworkStream, Encoding.UTF8);
+                    writer = new StreamWriter(NetworkStream, Encoding.UTF8) { AutoFlush = true };
                     if (Client.Connected)
                     {
                         Console.WriteLine($"Klient har anslutit sig {Client.Client.RemoteEndPoint}!");
-                        break;
+                        writer.WriteLine($"210 BATTLESHIP/1.0");
+                        var text1 = reader.ReadLine();
+                        Player2 = text1.Split()[1];
+                        WriteBlue(text1);
+                        writer.WriteLine($"220 {Username}");
+                        var start = reader.ReadLine();
+                        if(start.ToUpper() == "START")
+                        {
+                            //TODO: random person startar.
+                            writer.WriteLine($"221 You {Player2} will start.");
+                            break;
+                        }
+                       
                     }
                 }
 
@@ -76,13 +90,19 @@ namespace BattleShipServer
             else
             {
                 Client = new TcpClient(Host, Port);
+                NetworkStream = Client.GetStream();
+                reader = new StreamReader(NetworkStream, Encoding.UTF8);
+                writer = new StreamWriter(NetworkStream, Encoding.UTF8) { AutoFlush = true };
+
                 Console.WriteLine($"Ansluten till {Client.Client.RemoteEndPoint}");
+                WriteGreen(reader.ReadLine());
+                writer.WriteLine($"HELLO {Username}");
+                var text1 = reader.ReadLine();
+                Player2 = text1.Split()[1];
+                WriteBlue(text1);
+                var start = Console.ReadLine().ToUpper();
+                writer.WriteLine(start);
             }
-
-            NetworkStream = Client.GetStream();
-            reader = new StreamReader(NetworkStream, Encoding.UTF8);
-            writer = new StreamWriter(NetworkStream, Encoding.UTF8) { AutoFlush = true };
-
         }
 
         public void Play()
@@ -91,29 +111,30 @@ namespace BattleShipServer
             {
                 if (IsHost)
                 {
-                    Read();
+                    var opponentCommand = reader.ReadLine();
+                    Read(opponentCommand);
                 }
                 while (Client.Connected)
                 {
                     Write();
-                    Read();
+                    var opponentCommand = reader.ReadLine();
+                    Read(opponentCommand);
 
                 }
 
 
-                //Dispose!!!
+                //TODO: Dispose!!!
 
             }
         }
 
 
-        private void Read()
+        private void Read(string command)
         {
-            string P2 = IsHost ? "CLIENT" : "HOST";
             string Answer = "";
 
-            var command = reader.ReadLine();
-            WriteBlue($"{P2}: {command}");
+            //var command = reader.ReadLine();
+            WriteBlue($"{Player2}: {command}");
 
             if (string.Equals(command, "QUIT", StringComparison.InvariantCultureIgnoreCase))
             {
@@ -153,6 +174,12 @@ namespace BattleShipServer
         private void WriteBlue (string text)
         {
             Console.ForegroundColor = ConsoleColor.Blue;
+            Console.WriteLine(text);
+            Console.ResetColor();
+        }
+        private void WriteGreen(string text)
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine(text);
             Console.ResetColor();
         }
