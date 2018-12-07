@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 
 namespace BattleShipServer
 {
@@ -28,10 +29,13 @@ namespace BattleShipServer
             Console.WriteLine("Båtar är placerade...\n");
             Console.Write("Username: ");
             Username = Console.ReadLine();
+            Console.Clear();
             Console.WriteLine($"Välkommen {Username}!");
 
             Console.WriteLine("Ange host (lämna tomt för att vara host): ");
             Host = Console.ReadLine();
+            //TODO: Ta bort hotkey 1
+            if (Host == "l") Host = "localhost";
 
             //Du är server.
             if (string.IsNullOrEmpty(Host))
@@ -39,6 +43,8 @@ namespace BattleShipServer
                 IsHost = true;
                 Console.Write("Ange port att lyssna på: ");
                 Port = int.Parse(Console.ReadLine());
+                //TODO: Ta bort hotkey 2
+                if (Port == 5) Port = 5000;
                 StartListen(Port);
             }
             //Du är klient.
@@ -47,11 +53,12 @@ namespace BattleShipServer
                 IsHost = false;
                 Console.Write("Ange port: ");
                 Port = int.Parse(Console.ReadLine());
+                //TODO: Ta bort hotkey 3
+                if (Port == 5) Port = 5000;
+
                 Console.WriteLine($"Host: {Host}");
                 Console.WriteLine($"Port: {Port}\n");
-
-                Console.WriteLine("ANSLUT?");
-                Console.ReadLine();             
+           
             }
             Connect();
             Play();
@@ -108,6 +115,7 @@ namespace BattleShipServer
                 Player2 = text1.Split()[1];
                 WriteColor(true, text1);
                 var start = Console.ReadLine().ToUpper();
+                FixRow();
                 WriteColor(false, start);
                 writer.WriteLine(start);
                 WriteColor(true, reader.ReadLine());
@@ -117,38 +125,71 @@ namespace BattleShipServer
         public void Play()
         {
             Console.WriteLine("\n\n\n\t\t ----- BATTLESHIP BEGINS ----- \n");
+
+            string hitStatus = "";
+            string opponentHitStatus = "";
+            string opponentCommand = "";
+
             while (true)
             {
-                string hitStatus = "";
-                string opponentHitStatus = "";
-                string opponentCommand = "";
-
-                if (IsHost)
+                try
                 {
-                    opponentCommand = reader.ReadLine();
-                    hitStatus       = Read(opponentCommand);
+                    if (IsHost)
+                    {
+                        opponentCommand = reader.ReadLine();
+                        hitStatus = Read(opponentCommand);
+                    }
+
+                    while (Client.Connected)
+                    {
+                        Write(hitStatus);
+                        opponentHitStatus = reader.ReadLine();
+                        opponentCommand = reader.ReadLine();
+                        hitStatus = Read(opponentCommand, opponentHitStatus);
+
+                    }
                 }
-                while (Client.Connected)
+                catch (Exception)
                 {
-                    Write(hitStatus);
-                    opponentHitStatus = reader.ReadLine();
-                    opponentCommand   = reader.ReadLine();
-                    hitStatus = Read(opponentCommand);
 
+                    break;
                 }
 
-
-                //TODO: Dispose!!!
+                DisposeAll();
 
             }
         }
 
 
-        private string Read(string command)
+        private string Read(string command, string opponentHitStatus = "")
         {
             string Answer = "";
             string com1 =   "";
             string targ =   "";
+
+            if (opponentHitStatus.Split(" ")[0] == "270")
+            {
+                WriteColor(IsHost, "You won the game!");
+            }
+
+            if (string.Equals(command.Trim(), "QUIT", StringComparison.InvariantCultureIgnoreCase))
+            {
+                // TODO: Quit
+                if (IsHost)
+                {
+                    Client.Client.Disconnect(true);
+                }
+         
+            }
+            else if (string.Equals(command.Trim(), "HELP", StringComparison.InvariantCultureIgnoreCase))
+            {
+               // TODO: fixa hjälp.
+                Answer = "NO HELP FOR YOU";
+            }
+            else if (string.Equals(command.Trim(), "DATE", StringComparison.InvariantCultureIgnoreCase))
+            {
+                Answer = DateTime.UtcNow.ToString("o");
+            }
 
             try
             {
@@ -158,18 +199,16 @@ namespace BattleShipServer
             catch (Exception)
             {
                 Answer = "500 Syntax error - unknown command.";
+                WriteColor(!IsHost, opponentHitStatus);
+                WriteColor(!IsHost, $"{Player2}: {command.ToUpper()}");
+                WriteColor(IsHost, Answer);
                 return Answer;
             }
 
-            WriteColor(!IsHost, $"{Player2}: {command}");
-
-            if (string.Equals(command, "QUIT", StringComparison.InvariantCultureIgnoreCase))
-            {
-                Answer = "You want to quit.";
-            }
-            else if (string.Equals(com1, "FIRE", StringComparison.InvariantCultureIgnoreCase))
+            if (string.Equals(com1, "FIRE", StringComparison.InvariantCultureIgnoreCase))
             {
                 var target = OceanView.Targets.Where(t => t.GridPosition == targ.ToUpper()).FirstOrDefault();
+
                 if(target != null)
                 {
                     if (target.IsAlreadyHit)
@@ -178,33 +217,53 @@ namespace BattleShipServer
                     } 
 
                     else if (target.HasShip)
-                    {
+                    {   //kollar om träffen sänker skeppet.
                         var isSunk = target.Ship.Hit();
+                        target.IsAlreadyHit = true;
 
                         if (isSunk)
                         {
-                            Answer = target.Ship.SinkString;
+                            if (OceanView.AllShipsAreSunk())
+                            {   //Om alla skepp har sjunkit
+                                Answer = "260 You win!";
+                            }
+                            else
+                            {   //om bara aktuellt skepp sjunker
+                                Answer = target.Ship.SinkString;
+                            }
                         }
                         else
-                        {
+                        {   //Normal träff
                             Answer = target.Ship.HitString;
                         }
                     }
+                    else
+                    {
+                        Answer = "230 Miss!";
+                        
+                        target.IsAlreadyHit = true;
+                    }
+                }
+                else
+                {
+                    Answer = $"501 - Out of grid. ({targ})";
                 }
             }
 
-            else if (string.Equals(command, "FIRE G6", StringComparison.InvariantCultureIgnoreCase))
-            {
-                Answer = "245 HIT. Patrol Boat";
-            }
-            else if (string.Equals(command, "DATE", StringComparison.InvariantCultureIgnoreCase))
-            {
-                Answer = DateTime.UtcNow.ToString("o");
-            }
             else
             {
-                Answer = "230 Miss!";
+                Answer = $"501 - unknown syntax";
             }
+
+            if(opponentHitStatus != "")
+            {
+                //Skriver ut om man fick träff eller miss på sitt förra command mot motståndaren.
+                WriteColor(!IsHost, opponentHitStatus);
+            }
+            //Skriver ut vad motståndaren gjorde för command.
+            WriteColor(!IsHost, $"{Player2}: {command.ToUpper()}");
+
+            //Skriver ut vad motståndarens command gjorde (hit eller miss).
             WriteColor(IsHost, Answer);
             return Answer;
         }
@@ -213,12 +272,20 @@ namespace BattleShipServer
         {
             Console.Write("Send: ");
             var command = Console.ReadLine();
+            if (command.ToUpper() == "QUIT" && IsHost)
+            {
+                writer.WriteLine("270 - You win.");
+                Client.Client.Disconnect(true);
+            }
             FixRow();
             WriteColor(IsHost, command);
+
             if (hitStatus != "")
             {
+                //Skriver i kanalen om motståndaren fick en hit eller miss etc...
                 writer.WriteLine(hitStatus);
             }
+            //Skriver i kanalen vad man själv skrev för command.
             writer.WriteLine(command);
         }
 
@@ -232,7 +299,7 @@ namespace BattleShipServer
             }
             else
             {
-                Console.ForegroundColor = ConsoleColor.Magenta;
+                Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine(text);
                 Console.ResetColor();
             }
@@ -252,6 +319,14 @@ namespace BattleShipServer
                 Console.WriteLine($"Misslyckades att öppna socket. Troligtvis upptagen. {ex.Message}");
                 Environment.Exit(1);
             }
+        }
+
+        private void DisposeAll()
+        {
+            writer.Dispose();
+            reader.Dispose();
+            NetworkStream.Dispose();
+            Client.Dispose();
         }
 
         private void FixRow()

@@ -20,6 +20,18 @@ namespace BattleShipServer
             BuildGrid();
         }
 
+        public bool AllShipsAreSunk()
+        {
+            List<Ship> list = new List<Ship>();
+            list.Add(Carrier);
+            list.Add(BattleShip);
+            list.Add(Destroyer);
+            list.Add(Submarine);
+            list.Add(PatrolBoat);
+
+            return list.TrueForAll(s => s.IsSunk);
+        }
+
         public void BuildGrid()
         {
             Targets.Add(new Target("A1", Submarine));

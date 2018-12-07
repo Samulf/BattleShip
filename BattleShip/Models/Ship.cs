@@ -8,42 +8,42 @@ namespace BattleShipServer.Models
     {
         public string   Name     { get; set; }
         public int      Points   { get; set; }
-        public bool     IsSunk   { get; set; }
+        public bool     IsSunk   { get { return (Points == 0); } set { } }
         public string HitString  { get; set; }
         public string SinkString { get; set; }
 
 
-        public Ship(string shipType)
+        public Ship(string ship)
         {
-            if (shipType.ToUpper() == "CARRIER")
+            if (ship.ToUpper() == "CARRIER")
             {
                 Name       = "CARRIER";
-                Points     = 5;
+                Points     = 0;
                 HitString  = "241 You hit my Carrier";
                 SinkString = "251 You sunk my Carrier";
             }
-            if (shipType.ToUpper() == "BATTLESHIP")
+            else if (ship.ToUpper() == "BATTLESHIP")
             {
                 Name       = "BATTLESHIP";
-                Points     = 4;
+                Points     = 0;
                 HitString  = "242 You hit my Battleship";
                 SinkString = "252 You sunk my Battleship";
             }
-            if (shipType.ToUpper() == "DESTROYER")
+            else if (ship.ToUpper() == "DESTROYER")
             {
                 Name       = "DESTROYER";
-                Points     = 3;
+                Points     = 0;
                 HitString  = "243 You hit my Destroyer";
                 SinkString = "253 You sunk my Destroyer";
             }
-            if (shipType.ToUpper() == "SUBMARINE")
+            else if (ship.ToUpper() == "SUBMARINE")
             {
                 Name       = "SUBMARINE";
                 Points     = 3;
                 HitString  = "244 You hit my Submarine";
                 SinkString = "254 You sunk my Submarine";
             }
-            if (shipType.ToUpper() == "PATROL BOAT")
+            else if (ship.ToUpper() == "PATROL BOAT")
             {
                 Name       = "PATROL BOAT";
                 Points     = 2;
@@ -52,10 +52,10 @@ namespace BattleShipServer.Models
             }
             else
             {
-                Name       = "PATROL BOAT";
-                Points     = 2;
-                HitString  = "245 You hit my Patrol Boat";
-                SinkString = "255 You sunk my Patrol Boat";
+                Name       = "SWIMMING MAN";
+                Points     = 1;
+                HitString  = "245 You hit my man!";
+                SinkString = "255 You drowned my man";
             }
         }
 

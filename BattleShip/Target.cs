@@ -8,7 +8,7 @@ namespace BattleShipServer
     class Target
     {
         public string GridPosition { get; set; }
-        public bool   IsAlreadyHit        { get; set; }
+        public bool   IsAlreadyHit { get; set; }
         public bool   HasShip      { get; set; }
         public Ship   Ship         { get; set; }
 
