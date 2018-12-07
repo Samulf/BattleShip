@@ -67,19 +67,24 @@ namespace BattleShipServer
                     NetworkStream = Client.GetStream();
                     reader = new StreamReader(NetworkStream, Encoding.UTF8);
                     writer = new StreamWriter(NetworkStream, Encoding.UTF8) { AutoFlush = true };
+
                     if (Client.Connected)
                     {
                         Console.WriteLine($"Klient har anslutit sig {Client.Client.RemoteEndPoint}!");
                         writer.WriteLine($"210 BATTLESHIP/1.0");
+                        WriteColor(true, $"210 BATTLESHIP/1.0");
                         var text1 = reader.ReadLine();
                         Player2 = text1.Split()[1];
-                        WriteBlue(text1);
+                        WriteColor(false, text1);
                         writer.WriteLine($"220 {Username}");
+                        WriteColor(true, $"220 {Username}");
                         var start = reader.ReadLine();
+                        WriteColor(false, start);
                         if(start.ToUpper() == "START")
                         {
                             //TODO: random person startar.
                             writer.WriteLine($"221 You {Player2} will start.");
+                            WriteColor(true, $"221 You {Player2} will start.");
                             break;
                         }
                        
@@ -95,30 +100,39 @@ namespace BattleShipServer
                 writer = new StreamWriter(NetworkStream, Encoding.UTF8) { AutoFlush = true };
 
                 Console.WriteLine($"Ansluten till {Client.Client.RemoteEndPoint}");
-                WriteGreen(reader.ReadLine());
+                WriteColor(true, reader.ReadLine());
                 writer.WriteLine($"HELLO {Username}");
+                WriteColor(false, $"HELLO {Username}");
                 var text1 = reader.ReadLine();
                 Player2 = text1.Split()[1];
-                WriteBlue(text1);
+                WriteColor(true, text1);
                 var start = Console.ReadLine().ToUpper();
+                WriteColor(false, start);
                 writer.WriteLine(start);
+                WriteColor(true, reader.ReadLine());
             }
         }
 
         public void Play()
         {
+            Console.WriteLine("\n\n\n\t\t ----- BATTLESHIP BEGINS ----- \n");
             while (true)
             {
+                string hitStatus = "";
+                string opponentHitStatus = "";
+                string opponentCommand = "";
+
                 if (IsHost)
                 {
-                    var opponentCommand = reader.ReadLine();
-                    Read(opponentCommand);
+                    opponentCommand = reader.ReadLine();
+                    hitStatus       = Read(opponentCommand);
                 }
                 while (Client.Connected)
                 {
-                    Write();
-                    var opponentCommand = reader.ReadLine();
-                    Read(opponentCommand);
+                    Write(hitStatus);
+                    opponentHitStatus = reader.ReadLine();
+                    opponentCommand   = reader.ReadLine();
+                    hitStatus = Read(opponentCommand);
 
                 }
 
@@ -129,60 +143,62 @@ namespace BattleShipServer
         }
 
 
-        private void Read(string command)
+        private string Read(string command)
         {
             string Answer = "";
 
-            //var command = reader.ReadLine();
-            WriteBlue($"{Player2}: {command}");
+            WriteColor(!IsHost, $"{Player2}: {command}");
 
             if (string.Equals(command, "QUIT", StringComparison.InvariantCultureIgnoreCase))
             {
                 Answer = "You want to quit.";
             }
 
-            else if (string.Equals(command, "fök", StringComparison.InvariantCultureIgnoreCase))
+            else if (string.Equals(command, "FIRE G6", StringComparison.InvariantCultureIgnoreCase))
             {
-                Answer = "FOKOFF!";
+                Answer = "245 HIT. Patrol Boat";
             }
-
             else if (string.Equals(command, "DATE", StringComparison.InvariantCultureIgnoreCase))
             {
                 Answer = DateTime.UtcNow.ToString("o");
             }
             else
             {
-                //writer.WriteLine("feke");
-                //var pete = Console.ReadLine();
-                //Console.Write("Skriv: ");
-                //Answer = Console.ReadLine();
-                Answer = "Miss!";
+                Answer = "230 Miss!";
             }
-            writer.WriteLine(Answer);
+            WriteColor(IsHost, Answer);
+            return Answer;
         }
 
-        private void Write()
+        private void Write(string hitStatus)
         {
             Console.Write("Send: ");
-            Console.ForegroundColor = ConsoleColor.Green;
             var command = Console.ReadLine();
-            //Console.WriteLine(command);
+            FixRow();
+            WriteColor(IsHost, command);
+            if (hitStatus != "")
+            {
+                writer.WriteLine(hitStatus);
+            }
             writer.WriteLine(command);
-            Console.ResetColor();
         }
 
-        private void WriteBlue (string text)
+        private void WriteColor(bool isHost, string text)
         {
-            Console.ForegroundColor = ConsoleColor.Blue;
-            Console.WriteLine(text);
-            Console.ResetColor();
+            if (isHost)
+            {
+                Console.ForegroundColor = ConsoleColor.Blue;
+                Console.WriteLine(text);
+                Console.ResetColor();
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                Console.WriteLine(text);
+                Console.ResetColor();
+            }
         }
-        private void WriteGreen(string text)
-        {
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine(text);
-            Console.ResetColor();
-        }
+
 
         public void StartListen(int port)
         {
@@ -197,6 +213,13 @@ namespace BattleShipServer
                 Console.WriteLine("Misslyckades att öppna socket. Troligtvis upptagen.");
                 Environment.Exit(1);
             }
+        }
+
+        private void FixRow()
+        {
+            Console.SetCursorPosition(0, Console.CursorTop - 1);
+            Console.Write(new string(' ', Console.WindowWidth));
+            Console.SetCursorPosition(0, Console.CursorTop -1);
         }
 
 
