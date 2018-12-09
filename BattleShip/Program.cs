@@ -22,6 +22,7 @@ namespace BattleShip
                 Console.Clear();
                 Console.SetCursorPosition(Console.WindowWidth / 2, Console.WindowHeight / 2);
                 Console.WriteLine("-- DISCONNECTED --");
+                Console.SetCursorPosition(Console.WindowWidth / 2, (Console.WindowHeight / 2) +1);
                 Console.WriteLine("CONNECT AGAIN? (Y/N)");
 
                 var ans = Console.ReadLine();
