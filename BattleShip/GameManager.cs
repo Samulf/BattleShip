@@ -231,8 +231,9 @@ namespace BattleShipServer
             string hitStatus = "";
             string opponentHitStatus = "";
             string opponentCommand = "";
+            bool arePlaying = true;
 
-            while (true)
+            while (arePlaying)
             {
                 try
                 {
@@ -252,15 +253,15 @@ namespace BattleShipServer
 
                         if (hitStatus == "270")
                         {
-                            break;
+                            arePlaying = false;
+                            break;                            
                         }
 
                     }
                 }
                 catch (Exception)
                 {
-
-                    break;
+                    arePlaying = false;
                 }
 
                 DisposeAll();
@@ -285,7 +286,7 @@ namespace BattleShipServer
 
             if (opponentHitStatus.Split(" ")[0] == "270")
             {
-                WriteColor(IsHost, "You won the game!");
+                WriteColor(IsHost, RCodes.YouWin.FullString);
                 return "270";
             }
 
@@ -297,11 +298,13 @@ namespace BattleShipServer
                     WriteColor(!IsHost, "The client wants to quit. (press any key to continue)");
                     Console.ReadKey();
                     Client.Client.Disconnect(true);
+                    WriteColor(IsHost, RCodes.YouWin.FullString);
+                    return "270";
                 }
                 //TODO: be servern att avsluta själv
                 else
                 {
-                    WriteColor(IsHost, "You won the game!");
+                    WriteColor(IsHost, RCodes.YouWin.FullString);
                     return "270";
                 }
          
