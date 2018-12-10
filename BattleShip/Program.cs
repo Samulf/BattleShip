@@ -13,6 +13,8 @@ namespace BattleShip
 
         static void Main(string[] args)
         {
+            Console.SetWindowSize(100, 40);
+
             bool playing = true;
             GameManager = new GameManager();
 

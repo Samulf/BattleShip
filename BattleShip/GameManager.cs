@@ -29,19 +29,22 @@ namespace BattleShipServer
 
         public void Initialize()
         {
-            Console.WriteLine("Båtar är placerade...\n");
-            Console.Write("Username: ");
+            PrintIntro();
+            
+            
+            MiddleWL("Ships are placed...\n", true);
+            MiddleWL("Username: ", false, true, 8);
             Username = Console.ReadLine();
 
-            if (Username.ToUpper() == "OCEAN" || Username.ToUpper() == "O")
-            {
-                ShowOceanView();
-            }
+            //if (Username.ToUpper() == "OCEAN" || Username.ToUpper() == "O")
+            //{
+            //    ShowOceanView();
+            //}
 
             Console.Clear();
-            Console.WriteLine($"Välkommen {Username}!");
+            MiddleWL($"Välkommen {Username}!", true);
 
-            Console.WriteLine("Ange host (lämna tomt för att vara host): ");
+            MiddleWL("Ange host (lämna tomt för att vara host): ", false, true);
             Host = Console.ReadLine();
             //TODO: Ta bort hotkey 1
             if (Host == "l") Host = "localhost";
@@ -50,7 +53,7 @@ namespace BattleShipServer
             if (string.IsNullOrEmpty(Host))
             {
                 IsHost = true;
-                Console.Write("Ange port att lyssna på: ");
+                MiddleWL("Ange port att lyssna på: ",false, true);
                 Port = int.Parse(Console.ReadLine());
                 //TODO: Ta bort hotkey 2
                 if (Port == 5) Port = 5000;
@@ -60,13 +63,13 @@ namespace BattleShipServer
             else
             {
                 IsHost = false;
-                Console.Write("Ange port: ");
+                MiddleWL("Ange port: ", false, true);
                 Port = int.Parse(Console.ReadLine());
                 //TODO: Ta bort hotkey 3
                 if (Port == 5) Port = 5000;
 
-                Console.WriteLine($"Host: {Host}");
-                Console.WriteLine($"Port: {Port}\n");
+                MiddleWL($"Host: {Host}");
+                MiddleWL($"Port: {Port}");
            
             }
             Connect();
@@ -83,7 +86,7 @@ namespace BattleShipServer
             {
                 while (true)
                 {
-                    Console.WriteLine("Väntar på att någon ska ansluta sig...");
+                    MiddleWL("Väntar på att någon ska ansluta sig...");
                     Client = listener.AcceptTcpClient();
                     NetworkStream = Client.GetStream();
                     reader = new StreamReader(NetworkStream, Encoding.UTF8);
@@ -91,6 +94,7 @@ namespace BattleShipServer
 
                     if (Client.Connected)
                     {
+                        Console.Clear();
                         Console.WriteLine($"Klient har anslutit sig {Client.Client.RemoteEndPoint}!");
                         writer.WriteLine(RCodes.BattleShip.FullString);
                         WriteColor(true, RCodes.BattleShip.FullString);
@@ -171,6 +175,7 @@ namespace BattleShipServer
                 reader = new StreamReader(NetworkStream, Encoding.UTF8);
                 writer = new StreamWriter(NetworkStream, Encoding.UTF8) { AutoFlush = true };
 
+                Console.Clear();
                 Console.WriteLine($"Ansluten till {Client.Client.RemoteEndPoint}");
                 WriteColor(true, reader.ReadLine());
 
@@ -197,6 +202,7 @@ namespace BattleShipServer
                     WriteColor(false, start);
                     writer.WriteLine(start);
                     var whoStarts = reader.ReadLine();
+                    WriteColor(false, whoStarts);
                     try
                     {
                         var code = whoStarts.Split(" ")[0];
@@ -227,7 +233,6 @@ namespace BattleShipServer
         public void Play()
         {
             Console.WriteLine("\n\n\n");
-            Console.SetCursorPosition(Console.WindowWidth / 2, Console.CursorTop);
             Console.WriteLine("-- BATTLESHIP BEGINS --\n");
 
             string hitStatus = "";
@@ -455,11 +460,11 @@ namespace BattleShipServer
             {
                 listener = new TcpListener(IPAddress.Any, port);
                 listener.Start();
-                Console.WriteLine($"Lyssnar på port: {port}");
+                MiddleWL($"Lyssnar på port: {port}");
             }
             catch (SocketException ex)
             {
-                Console.WriteLine($"Misslyckades att öppna socket. Troligtvis upptagen. {ex.Message}");
+                MiddleWL($"Misslyckades att öppna socket. Troligtvis upptagen. {ex.Message}");
                 Environment.Exit(1);
             }
         }
@@ -474,9 +479,9 @@ namespace BattleShipServer
 
         private void FixRow()
         {
-            Console.SetCursorPosition(0, Console.CursorTop - 1);
-            Console.Write(new string(' ', Console.WindowWidth));
-            Console.SetCursorPosition(0, Console.CursorTop -1);
+                Console.SetCursorPosition(0, Console.CursorTop - 1);
+                Console.Write(new string(' ', Console.WindowWidth));
+                Console.SetCursorPosition(0, Console.CursorTop);
         }
 
         private void ShowOceanView()
@@ -484,17 +489,58 @@ namespace BattleShipServer
             OceanView.Print();
             Console.ReadKey();
 
-            Console.Write(new string(' ', Console.WindowWidth));
-            Console.SetCursorPosition(0, Console.CursorTop - 1);
-
             for (int i = 0; i < 26; i++)
             {
-                FixRow();
+                    Console.Write(new string(' ', Console.WindowWidth));
+                    Console.SetCursorPosition(0, Console.CursorTop - 1);
             }
-
+            Console.Write(new string(' ', Console.WindowWidth));
+            Console.SetCursorPosition(0, Console.CursorTop);
 
         }
 
+        public void PrintIntro()
+        {
+            Console.WriteLine("\n\n\n\n");
+            Console.WriteLine("                                          |__");
+            Console.WriteLine("                                          |\\/");
+            Console.WriteLine("                                          ---");
+            Console.WriteLine("                                          / | [");
+            Console.WriteLine("                                   !      | |||");
+            Console.WriteLine("                                 _/|     _/|-++'");
+            Console.WriteLine("                             +  +--|    |--|--|_ |-");
+            Console.WriteLine("                          { /|__|  |/\\__|  |--- |||__/");
+            Console.WriteLine("                         +---------------___[}-_===_.'____               /\\");
+            Console.WriteLine("                     ____`-' ||___-{]_| _[}-  |     |_[___\\==--          \\/   _");
+            Console.WriteLine("      __..._____--==/___]_|__|_____________________________[___\\==--___,-----' .7");
+            Console.WriteLine("     |                                                                   BS-18/");
+            Console.WriteLine("      \\_______________________________________________________________________|");
+            Console.WriteLine("\n\n                                     BATTLESHIP 1.0");
 
+            Console.ReadKey();
+            Console.Clear();
+        }
+
+        public void MiddleWL(string offset, bool isFirst = false, bool OnlyWrite = false, int extraOffset = 0)
+        {
+            int o = offset.Length / 2 + extraOffset;
+            if (isFirst)
+            {
+                Console.SetCursorPosition(Console.WindowWidth / 2 - o, Console.WindowHeight / 3);
+            }
+            else
+            {
+                Console.SetCursorPosition(Console.WindowWidth / 2 - o, Console.CursorTop);
+            }
+            if (OnlyWrite)
+            {
+                Console.Write(offset);
+            }
+            else
+            {
+                Console.WriteLine(offset);
+            }
+           
+        }
     }
 }

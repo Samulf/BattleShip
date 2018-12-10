@@ -165,38 +165,73 @@ namespace BattleShipServer
 
         public void Print()
         {
-            Console.WriteLine("OCEAN VIEW");
-
-            Console.ForegroundColor = ConsoleColor.Blue;
-            Console.WriteLine($"CARRIER       {Carrier.Points}/5");
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"BATTLESHIP    {Carrier.Points}/4");
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"DESTROYER     {Carrier.Points}/3");
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"SUBMARINE     {Carrier.Points}/3");
-            Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.WriteLine($"PATROL BOAT   {Carrier.Points}/2");
-
-            Console.ResetColor();
+            Console.WriteLine("\n                    ----- OCEAN VIEW -----");
+            Console.WriteLine("                    (press 'Enter' to hide)");
 
             for (int i = 0; i < 10; i++)
             {
+
+                if (i == 1)
+                {
+                    Console.ForegroundColor = ConsoleColor.Blue;
+                    Console.Write($"     CARRIER       {Carrier.Points}/5");
+                    if (Carrier.Points == 0)
+                        Console.Write(" (DEAD)");
+                }
+                else if (i == 2)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.Write($"     BATTLESHIP    {BattleShip.Points}/4");
+                    if (BattleShip.Points == 0)
+                        Console.Write(" (DEAD)");
+                }
+                else if (i == 3)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.Write($"     DESTROYER     {Destroyer.Points}/3");
+                    if (Destroyer.Points == 0)
+                        Console.Write(" (DEAD)");
+                }
+                else if (i == 4)
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.Write($"     SUBMARINE     {Submarine.Points}/3");
+                    if (Submarine.Points == 0)
+                        Console.Write(" (DEAD)");
+                }
+                else if (i == 5)
+                {
+                    Console.ForegroundColor = ConsoleColor.Magenta;
+                    Console.Write($"     PATROL BOAT   {PatrolBoat.Points}/2");
+                    if (PatrolBoat.Points == 0)
+                        Console.Write(" (DEAD)");
+                }
+                else if (i == 6)
+                {
+                    Console.Write("     ");
+                    Console.BackgroundColor = ConsoleColor.DarkGray;
+                    Console.ForegroundColor = ConsoleColor.Black;
+                    Console.Write($"M!");
+                    Console.BackgroundColor = ConsoleColor.Black;
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.Write($" = Miss!");
+                }
+
+                Console.ResetColor();
                 Console.WriteLine("\n--------------------------------");
                 Console.Write("|");
+
+               
                 for (int j = 1; j < 11; j++)
                 {
                     var position = Letters[i] + j;
-
                     var target = Targets.Find(t => t.GridPosition == position);
-
-                    
 
                     if (target.HasShip)
                     {
                         Console.ForegroundColor = ConsoleColor.Black;
 
-                        if (target.Ship.Name == "CARRIER")
+                        if      (target.Ship.Name == "CARRIER")
                         {
                             Console.BackgroundColor = ConsoleColor.Blue;
                         }
@@ -221,15 +256,13 @@ namespace BattleShipServer
                         {
                             Console.BackgroundColor = ConsoleColor.DarkRed;
                         }
+                        Console.Write(target.GridPosition);
                     }
-
-                    if (target.IsAlreadyHit)
+                    else if (target.IsAlreadyHit)
                     {
                         Console.BackgroundColor = ConsoleColor.DarkGray;
-                        //Console.Write("*");
-                        char c = Convert.ToChar(176);
-                        //var m = c.ToString();
-                        Console.Write(c);
+                        Console.ForegroundColor = ConsoleColor.Black;
+                        Console.Write($"M!");
                     }
                     else
                     {
@@ -239,11 +272,9 @@ namespace BattleShipServer
                     Console.ResetColor();
 
                     Console.Write("|");
-
                 }
-
-
             }
+            Console.WriteLine("\n");
         }
     }
 }
