@@ -18,21 +18,21 @@ namespace BattleShipServer.Models
             if (ship.ToUpper() == "CARRIER")
             {
                 Name       = "CARRIER";
-                Points     = 0;
+                Points     = 5;
                 HitString  = "241 You hit my Carrier";
                 SinkString = "251 You sunk my Carrier";
             }
             else if (ship.ToUpper() == "BATTLESHIP")
             {
                 Name       = "BATTLESHIP";
-                Points     = 0;
+                Points     = 4;
                 HitString  = "242 You hit my Battleship";
                 SinkString = "252 You sunk my Battleship";
             }
             else if (ship.ToUpper() == "DESTROYER")
             {
                 Name       = "DESTROYER";
-                Points     = 0;
+                Points     = 3;
                 HitString  = "243 You hit my Destroyer";
                 SinkString = "253 You sunk my Destroyer";
             }
