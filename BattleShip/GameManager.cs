@@ -36,7 +36,6 @@ namespace BattleShipServer
             if (Username.ToUpper() == "OCEAN" || Username.ToUpper() == "O")
             {
                 ShowOceanView();
-                Console.ReadKey();
             }
 
             Console.Clear();
@@ -483,6 +482,17 @@ namespace BattleShipServer
         private void ShowOceanView()
         {
             OceanView.Print();
+            Console.ReadKey();
+
+            Console.Write(new string(' ', Console.WindowWidth));
+            Console.SetCursorPosition(0, Console.CursorTop - 1);
+
+            for (int i = 0; i < 26; i++)
+            {
+                FixRow();
+            }
+
+
         }
 
 

@@ -166,7 +166,20 @@ namespace BattleShipServer
         public void Print()
         {
             Console.WriteLine("OCEAN VIEW");
-            
+
+            Console.ForegroundColor = ConsoleColor.Blue;
+            Console.WriteLine($"CARRIER       {Carrier.Points}/5");
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"BATTLESHIP    {Carrier.Points}/4");
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"DESTROYER     {Carrier.Points}/3");
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($"SUBMARINE     {Carrier.Points}/3");
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine($"PATROL BOAT   {Carrier.Points}/2");
+
+            Console.ResetColor();
+
             for (int i = 0; i < 10; i++)
             {
                 Console.WriteLine("\n--------------------------------");
@@ -203,11 +216,20 @@ namespace BattleShipServer
                         {
                             Console.BackgroundColor = ConsoleColor.Magenta;
                         }
+
+                        if (target.IsAlreadyHit)
+                        {
+                            Console.BackgroundColor = ConsoleColor.DarkRed;
+                        }
                     }
 
                     if (target.IsAlreadyHit)
                     {
-                        Console.Write("X");
+                        Console.BackgroundColor = ConsoleColor.DarkGray;
+                        //Console.Write("*");
+                        char c = Convert.ToChar(176);
+                        //var m = c.ToString();
+                        Console.Write(c);
                     }
                     else
                     {
