@@ -86,9 +86,7 @@ namespace BattleShipServer
                     if (Client.Connected)
                     {
                         Console.WriteLine($"Klient har anslutit sig {Client.Client.RemoteEndPoint}!");
-                        //writer.WriteLine($"210 BATTLESHIP/1.0");
                         writer.WriteLine(RCodes.BattleShip.FullString);
-                        //WriteColor(true, $"210 BATTLESHIP/1.0");
                         WriteColor(true, RCodes.BattleShip.FullString);
 
                         while (true)
@@ -132,10 +130,8 @@ namespace BattleShipServer
                             WriteColor(false, start);
                             if (start.ToUpper() == "START")
                             {
-                                //TODO: random person startar.
                                 int randomstart = rnd.Next(2);
-                                //TODO: TA BORT DETTA
-                                randomstart = 1;
+
                                 if(randomstart == 0)
                                 {
                                     writer.WriteLine($"{RCodes.ClientStarts.Code} You {Player2} will start.");
@@ -386,8 +382,35 @@ namespace BattleShipServer
 
         private void Write(string hitStatus)
         {
-            Console.Write("Send: ");
-            var command = Console.ReadLine();
+            string command;
+
+            while (true)
+            {
+                Console.Write("Send: ");
+                command = Console.ReadLine();
+
+                if (command.ToUpper() == "OCEAN")
+                {
+                    Console.WriteLine("[PRINTING OCEAN VIEW]");
+                }
+                else if (command.ToUpper() == "RADAR")
+                {
+                    Console.WriteLine("[PRINTING RADAR VIEW]");
+                }
+                else if (command.ToUpper() == "HELP")
+                {
+                    Console.WriteLine("[PRINTING HELP]");
+                }
+                else if (command.ToUpper() == "QUIT")
+                {
+                    Console.WriteLine("[QUIT GAME]");
+                }
+                else
+                {
+                    break;
+                }
+            }
+           
             if (command.ToUpper() == "QUIT" && IsHost)
             {
                 writer.WriteLine("270 - You win.");
