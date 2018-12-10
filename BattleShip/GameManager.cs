@@ -32,6 +32,13 @@ namespace BattleShipServer
             Console.WriteLine("Båtar är placerade...\n");
             Console.Write("Username: ");
             Username = Console.ReadLine();
+
+            if (Username.ToUpper() == "OCEAN" || Username.ToUpper() == "O")
+            {
+                ShowOceanView();
+                Console.ReadKey();
+            }
+
             Console.Clear();
             Console.WriteLine($"Välkommen {Username}!");
 
@@ -265,7 +272,6 @@ namespace BattleShipServer
             }
         }
 
-
         private string Read(string command, string opponentHitStatus = "")
         {
             string Answer = "";
@@ -391,7 +397,7 @@ namespace BattleShipServer
 
                 if (command.ToUpper() == "OCEAN")
                 {
-                    Console.WriteLine("[PRINTING OCEAN VIEW]");
+                    ShowOceanView();
                 }
                 else if (command.ToUpper() == "RADAR")
                 {
@@ -444,7 +450,6 @@ namespace BattleShipServer
             }
         }
 
-
         public void StartListen(int port)
         {
             try
@@ -473,6 +478,11 @@ namespace BattleShipServer
             Console.SetCursorPosition(0, Console.CursorTop - 1);
             Console.Write(new string(' ', Console.WindowWidth));
             Console.SetCursorPosition(0, Console.CursorTop -1);
+        }
+
+        private void ShowOceanView()
+        {
+            OceanView.Print();
         }
 
 

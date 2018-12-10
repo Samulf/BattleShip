@@ -7,27 +7,44 @@ namespace BattleShipServer
 {
     class OceanView
     {
-        public List<Target> Targets { get; set; }
-        public Ship Carrier         { get; set; } = new Ship("Carrier");    //5
-        public Ship BattleShip      { get; set; } = new Ship("BattleShip"); //4
-        public Ship Destroyer       { get; set; } = new Ship("Destroyer");  //3
-        public Ship Submarine       { get; set; } = new Ship("Submarine");  //3
-        public Ship PatrolBoat      { get; set; } = new Ship("Patrol Boat");//2
+        public List<Target>  Targets { get; set; }
+        private List<string> Letters { get; set; }
+        public Ship Carrier          { get; set; } = new Ship("Carrier");    //5
+        public Ship BattleShip       { get; set; } = new Ship("BattleShip"); //4
+        public Ship Destroyer        { get; set; } = new Ship("Destroyer");  //3
+        public Ship Submarine        { get; set; } = new Ship("Submarine");  //3
+        public Ship PatrolBoat       { get; set; } = new Ship("Patrol Boat");//2
 
         public OceanView()
         {
             Targets = new List<Target>();
+            Letters = new List<string>
+            {
+                "A",
+                "B",
+                "C",
+                "D",
+                "E",
+                "F",
+                "G",
+                "H",
+                "I",
+                "J"
+            };
             BuildGrid();
+
         }
 
         public bool AllShipsAreSunk()
         {
-            List<Ship> list = new List<Ship>();
-            list.Add(Carrier);
-            list.Add(BattleShip);
-            list.Add(Destroyer);
-            list.Add(Submarine);
-            list.Add(PatrolBoat);
+            List<Ship> list = new List<Ship>
+            {
+                Carrier,
+                BattleShip,
+                Destroyer,
+                Submarine,
+                PatrolBoat
+            };
 
             return list.TrueForAll(s => s.IsSunk);
         }
@@ -144,6 +161,67 @@ namespace BattleShipServer
             Targets.Add(new Target("J9"));
             Targets.Add(new Target("J10"));
 
+        }
+
+        public void Print()
+        {
+            Console.WriteLine("OCEAN VIEW");
+            
+            for (int i = 0; i < 10; i++)
+            {
+                Console.WriteLine("\n--------------------------------");
+                Console.Write("|");
+                for (int j = 1; j < 11; j++)
+                {
+                    var position = Letters[i] + j;
+
+                    var target = Targets.Find(t => t.GridPosition == position);
+
+                    
+
+                    if (target.HasShip)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Black;
+
+                        if (target.Ship.Name == "CARRIER")
+                        {
+                            Console.BackgroundColor = ConsoleColor.Blue;
+                        }
+                        else if (target.Ship.Name == "BATTLESHIP")
+                        {
+                            Console.BackgroundColor = ConsoleColor.Green;
+                        }
+                        else if (target.Ship.Name == "DESTROYER")
+                        {
+                            Console.BackgroundColor = ConsoleColor.Yellow;
+                        }
+                        else if (target.Ship.Name == "SUBMARINE")
+                        {
+                            Console.BackgroundColor = ConsoleColor.Cyan;
+                        }
+                        else if (target.Ship.Name == "PATROL BOAT")
+                        {
+                            Console.BackgroundColor = ConsoleColor.Magenta;
+                        }
+                    }
+
+                    if (target.IsAlreadyHit)
+                    {
+                        Console.Write("X");
+                    }
+                    else
+                    {
+                        Console.Write(target.GridPosition);
+                    }
+
+                    Console.ResetColor();
+
+                    Console.Write("|");
+
+                }
+
+
+            }
         }
     }
 }
