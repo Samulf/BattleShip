@@ -45,7 +45,7 @@ namespace BattleShipServer
             //TODO: Ta bort hotkey 1
             if (Host == "l") Host = "localhost";
 
-            //Du är server.
+            //Du är host.
             if (string.IsNullOrEmpty(Host))
             {
                 IsHost = true;
@@ -58,10 +58,14 @@ namespace BattleShipServer
                     {
                         MiddleWL("Felaktigt portnummer!");
                     }
+                    else
+                    {
+                        //TODO: Ta bort hotkey 2
+                        if (tempPort == 5) Port = 5000;
+                        else Port = tempPort;
+                    }
                 } while (!portParsed);
                
-                //TODO: Ta bort hotkey 2
-                if (Port == 5) Port = 5000;
                 StartListen(Port);
             }
             //Du är klient.
@@ -77,9 +81,13 @@ namespace BattleShipServer
                     {
                         MiddleWL("Felaktigt portnummer!");
                     }
+                    else
+                    {
+                        //TODO: Ta bort hotkey 2
+                        if (tempPort == 5) Port = 5000;
+                        else Port = tempPort;
+                    }
                 } while (!portParsed);
-                //TODO: Ta bort hotkey 3
-                if (Port == 5) Port = 5000;
 
                 MiddleWL($"Host: {Host}");
                 MiddleWL($"Port: {Port}");
@@ -91,44 +99,6 @@ namespace BattleShipServer
             Console.WriteLine("-- DISCONNECTED --");
             Console.ReadKey();
 
-        }
-
-        private void ShowHelp()
-        {
-            Console.WriteLine();
-            MiddleWL("----- HELP -----");
-            MiddleWL("(press 'Enter' to hide)");
-            Console.WriteLine();
-            HelpWL("BATTLESHIP/1.0");
-            HelpWL("This is a classic BattleShip game, you connect with another player,");
-            HelpWL("and you take turns to fire.");
-            HelpWL("This game is not case sensitive");
-            HelpWL("(it doesn't matter if you write 'HELP' or 'help' - or even 'hElP').");
-            HelpWL("After you have got a connection with another player");
-            HelpWL("the CLIENT have to say 'START' to start the game.");
-            HelpWL("So if you are the HOST you'll have to wait for the client to start the game.");
-            Console.WriteLine();
-            HelpWL("COMMANDS:");
-            Console.WriteLine();
-            HelpWL("HELLO <username>  - This is the first command a client have to use when connected.");
-            HelpWL("START             - This is how the client starts the game after you have connected.");
-            HelpWL("FIRE <coordinate> - When the game has started, this is the command to fire at the enemy ship.");
-            HelpWL("                    <coordinate> have to be replaced by something between A1 to J10...");
-            HelpWL("                    ...example: 'FIRE C6'. Optional message after the coordinate can be applied.");
-            HelpWL("OCEAN             - Shows the Ocean View. This is your boats on a map.");
-            HelpWL("RADAR             - Shows where you have hit/missed previous shots to the enemy ships");
-            HelpWL("HELP              - Shows help. Obviously you found it...");
-            HelpWL("QUIT              - Quits the game and disconnects from the other player.");
-
-            Console.ReadKey();
-
-            for (int i = 0; i < 26; i++)
-            {
-                Console.Write(new string(' ', Console.WindowWidth));
-                Console.SetCursorPosition(0, Console.CursorTop - 1);
-            }
-            Console.Write(new string(' ', Console.WindowWidth));
-            Console.SetCursorPosition(0, Console.CursorTop);
         }
 
         public void Connect()
@@ -241,7 +211,6 @@ namespace BattleShipServer
                 }
                 catch (Exception)
                 {
-
                     Player2 = "(Host)";
                     WriteColor(true, "220 " +Player2);
                 }
@@ -305,17 +274,26 @@ namespace BattleShipServer
 
                     while (Client.Connected)
                     {
-                        myLastCommand = Write(hitStatus);
-                        opponentHitStatus = reader.ReadLine();
-                        opponentCommand = reader.ReadLine();
-                        hitStatus = Read(opponentCommand, opponentHitStatus, myLastCommand);
-
-                        if (hitStatus == "270")
+                        //TODO: fel!?
+                        myLastCommand = Write();
+                        if (myLastCommand == "QUIT")
                         {
                             arePlaying = false;
-                            break;                            
+                            break;
                         }
+                        else
+                        {
+                            opponentHitStatus = reader.ReadLine();
+                            WriteColor(!IsHost, opponentHitStatus);
+                            opponentCommand = reader.ReadLine();
+                            hitStatus = Read(opponentCommand, opponentHitStatus, myLastCommand);
 
+                            if (hitStatus == "270")
+                            {
+                                arePlaying = false;
+                                break;
+                            }
+                        }
                     }
                 }
                 catch (Exception)
@@ -349,9 +327,9 @@ namespace BattleShipServer
                 SetEnemyRadarLastHit(mylastcomPosition.ToUpper(), opponentHitStatus);
             }
 
-            if (opponentHitStatus.Split(" ")[0] == "270")
+            if (opponentHitStatus.Split(" ")[0] == "270" || com1 == "270")
             {
-                WriteColor(IsHost, RCodes.YouWin.FullString);
+                WriteColor(IsHost, RCodes.ConnectionClosed.FullString);
                 return "270";
             }
 
@@ -436,20 +414,21 @@ namespace BattleShipServer
                 Answer = $"{RCodes.SyntaxError.FullString}";
             }
 
-            if(opponentHitStatus != "")
-            {
-                //Skriver ut om man fick träff eller miss på sitt förra command mot motståndaren.
-                WriteColor(!IsHost, opponentHitStatus);
-            }
+            //if(opponentHitStatus != "")
+            //{
+            //    //Skriver ut om man fick träff eller miss på sitt förra command mot motståndaren.
+            //    WriteColor(!IsHost, opponentHitStatus);
+            //}
             //Skriver ut vad motståndaren gjorde för command.
             WriteColor(!IsHost, $"{Player2}: {command.ToUpper()}");
 
             //Skriver ut vad motståndarens command gjorde (hit eller miss).
             WriteColor(IsHost, Answer);
+            writer.WriteLine(Answer);
             return Answer;
         }
 
-        private string Write(string hitStatus)
+        private string Write()
         {
             string command = ReadCommandConsole();
 
@@ -483,18 +462,18 @@ namespace BattleShipServer
             if (command.ToUpper() == "QUIT" && IsHost)
             {
                 writer.WriteLine("270 - You win.");
+                Console.Clear();
+                MiddleWL("YOU GAVE UP...", true);
+                Console.ReadKey();
                 Client.Client.Disconnect(true);
             }
-            FixRow();
-            WriteColor(IsHost, command.ToUpper());
-
-            if (hitStatus != "")
+            else
             {
-                //Skriver i kanalen om motståndaren fick en hit eller miss etc...
-                writer.WriteLine(hitStatus);
-            }
-            //Skriver i kanalen vad man själv skrev för command.
-            writer.WriteLine(command);
+                FixRow();
+                WriteColor(IsHost, command.ToUpper());
+                //Skriver i kanalen vad man själv skrev för command.
+                writer.WriteLine(command);
+            }        
 
             return command;
         }
@@ -514,47 +493,39 @@ namespace BattleShipServer
             Console.ResetColor();
         }
 
-        private string ReadCommandConsole(string command = "")
+        private string ReadCommandConsole()
         {
-            if (command == "")
-            {
-                command = Console.ReadLine();
-            }
-
-            command = command.ToUpper().Trim();
+            string command = "";
 
             bool isOtherCommand = true;
             while (isOtherCommand)
             {
+                Console.Write("Send: ");
+                command = Console.ReadLine();
+                command = command.ToUpper().Trim();
+
                 if (command == "" || string.IsNullOrEmpty(command))
                 {
                     //TODO: detta kan bli fel (om man lämnar commanden tom).
+                    FixRow();
                     Console.WriteLine("[Command was empty (write 'HELP' for available commands)]");
-                    //FixRow();
                 }
                 else if (command == "RADAR" || command == "R" || command == "SHOWRADAR" || command == "RADARVIEW")
                 {
                     ShowRadar();
-                    Console.Write("Send: ");
-                    command = Console.ReadLine();
                 }
                 else if (command == "OCEAN" || command == "O" || command == "SHOWOCEAN" || command == "OCEANVIEW")
                 {
                     ShowOceanView();
-                    Console.Write("Send: ");
-                    command = Console.ReadLine();
                 }
                 else if (command == "HELP" || command == "H" || command == "COMMANDS")
                 {
                     ShowHelp();
-                    Console.Write("Send: ");
-                    command = Console.ReadLine();
                 }
                 else if (command == "QUIT" || command == "Q" || command == "EXIT")
                 {
                     Console.WriteLine("QUIT THE GAMEMOOOO");
-                    Console.Write("Send: ");
-                    command = Console.ReadLine();
+                    isOtherCommand = false;
                 }
                 else
                 {
@@ -624,6 +595,44 @@ namespace BattleShipServer
 
         }
 
+        private void ShowHelp()
+        {
+            Console.WriteLine();
+            MiddleWL("----- HELP -----");
+            MiddleWL("(press 'Enter' to hide)");
+            Console.WriteLine();
+            HelpWL("BATTLESHIP/1.0");
+            HelpWL("This is a classic BattleShip game, you connect with another player,");
+            HelpWL("and you take turns to fire.");
+            HelpWL("This game is not case sensitive");
+            HelpWL("(it doesn't matter if you write 'HELP' or 'help' - or even 'hElP').");
+            HelpWL("After you have got a connection with another player");
+            HelpWL("the CLIENT have to say 'START' to start the game.");
+            HelpWL("So if you are the HOST you'll have to wait for the client to start the game.");
+            Console.WriteLine();
+            HelpWL("COMMANDS:");
+            Console.WriteLine();
+            HelpWL("HELLO <username>  - This is the first command a client have to use when connected.");
+            HelpWL("START             - This is how the client starts the game after you have connected.");
+            HelpWL("FIRE <coordinate> - When the game has started, this is the command to fire at the enemy ship.");
+            HelpWL("                    <coordinate> have to be replaced by something between A1 to J10...");
+            HelpWL("                    ...example: 'FIRE C6'. Optional message after the coordinate can be applied.");
+            HelpWL("OCEAN             - Shows the Ocean View. This is your ships on a map.");
+            HelpWL("RADAR             - Shows where you have hit/missed previous shots to the enemy ships");
+            HelpWL("HELP              - Shows help. Obviously you found it...");
+            HelpWL("QUIT              - Quits the game and disconnects from the other player.");
+
+            Console.ReadKey();
+
+            for (int i = 0; i < 25; i++)
+            {
+                Console.Write(new string(' ', Console.WindowWidth));
+                Console.SetCursorPosition(0, Console.CursorTop - 1);
+            }
+            Console.Write(new string(' ', Console.WindowWidth));
+            Console.SetCursorPosition(0, Console.CursorTop);
+        }
+
         public void PrintIntro()
         {
             Console.WriteLine("\n\n\n\n");
@@ -676,16 +685,16 @@ namespace BattleShipServer
 
         public void HelpWL(string text)
         {
-            Console.SetCursorPosition(10, Console.CursorTop);
+            Console.SetCursorPosition(6, Console.CursorTop);
             Console.WriteLine(text);
         }
 
         private void SetEnemyRadarLastHit(string myLastComPosition, string opHitStatus)
         {
+            //TODO: Ifall andra spelet skickar konstig hitstatus.
             var statCode = opHitStatus.Split(" ")[0];
             var statCode2First = statCode.Substring(0, 2);
             var statCode3 = statCode.Substring(2, 1);
-            var respCode = new ResponseCode(statCode);
             //Om det är miss:
             if (statCode == "230")
             {
