@@ -6,8 +6,8 @@ namespace BattleShipServer
 {
     public class ResponseCode
     {
-        public string Code { get; set; }
-        public string FullString { get; set; }
+        public string Code        { get; set; }
+        public string FullString  { get; set; }
 
         public ResponseCode()
         {

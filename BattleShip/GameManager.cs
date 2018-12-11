@@ -19,6 +19,7 @@ namespace BattleShipServer
         public int           Port       { get; set; }
         public ResponseCodes RCodes     { get; set; } = new ResponseCodes();
         public OceanView     OceanView  { get; set; } = new OceanView();
+        public OceanView     Radar      { get; set; } = new OceanView(true);
 
         private readonly Random rnd = new Random();
         private TcpListener listener;
@@ -36,10 +37,10 @@ namespace BattleShipServer
             MiddleWL("Username: ", false, true, 8);
             Username = Console.ReadLine();
 
-            //if (Username.ToUpper() == "OCEAN" || Username.ToUpper() == "O")
-            //{
-            //    ShowOceanView();
-            //}
+            if (Username.ToUpper() == "RADAR" || Username.ToUpper() == "R")
+            {
+                ShowRadar();
+            }
 
             Console.Clear();
             MiddleWL($"Välkommen {Username}!", true);
@@ -239,6 +240,7 @@ namespace BattleShipServer
             string opponentHitStatus = "";
             string opponentCommand = "";
             bool arePlaying = true;
+            string myLastCommand = "";
 
             while (arePlaying)
             {
@@ -253,10 +255,10 @@ namespace BattleShipServer
 
                     while (Client.Connected)
                     {
-                        Write(hitStatus);
+                        myLastCommand = Write(hitStatus);
                         opponentHitStatus = reader.ReadLine();
                         opponentCommand = reader.ReadLine();
-                        hitStatus = Read(opponentCommand, opponentHitStatus);
+                        hitStatus = Read(opponentCommand, opponentHitStatus, myLastCommand);
 
                         if (hitStatus == "270")
                         {
@@ -276,19 +278,26 @@ namespace BattleShipServer
             }
         }
 
-        private string Read(string command, string opponentHitStatus = "")
+        private string Read(string command, string opponentHitStatus = "", string myLastCom = "")
         {
             string Answer = "";
             string com1 =   "";
             string targ =   "";
+            string mylastcomPosition = "";
 
             try
             {
                 com1 = command.Split(" ")[0];
                 targ = command.Split(" ")[1];
+                mylastcomPosition = myLastCom.Split(" ")[1];
             }
             catch (Exception)
             {}
+
+            if(mylastcomPosition != "" && opponentHitStatus != "")
+            {
+                SetEnemyRadarLastHit(mylastcomPosition.ToUpper(), opponentHitStatus);
+            }
 
             if (opponentHitStatus.Split(" ")[0] == "270")
             {
@@ -390,7 +399,7 @@ namespace BattleShipServer
             return Answer;
         }
 
-        private void Write(string hitStatus)
+        private string Write(string hitStatus)
         {
             string command;
 
@@ -405,7 +414,7 @@ namespace BattleShipServer
                 }
                 else if (command.ToUpper() == "RADAR")
                 {
-                    Console.WriteLine("[PRINTING RADAR VIEW]");
+                    ShowRadar();
                 }
                 else if (command.ToUpper() == "HELP")
                 {
@@ -436,6 +445,8 @@ namespace BattleShipServer
             }
             //Skriver i kanalen vad man själv skrev för command.
             writer.WriteLine(command);
+
+            return command;
         }
 
         private void WriteColor(bool isHost, string text)
@@ -443,15 +454,14 @@ namespace BattleShipServer
             if (isHost)
             {
                 Console.ForegroundColor = ConsoleColor.Blue;
-                Console.WriteLine(text);
-                Console.ResetColor();
             }
             else
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine(text);
-                Console.ResetColor();
             }
+
+            Console.WriteLine(text);
+            Console.ResetColor();
         }
 
         public void StartListen(int port)
@@ -498,6 +508,20 @@ namespace BattleShipServer
             Console.SetCursorPosition(0, Console.CursorTop);
 
         }
+        private void ShowRadar()
+        {
+            Radar.Print();
+            Console.ReadKey();
+
+            for (int i = 0; i < 26; i++)
+            {
+                Console.Write(new string(' ', Console.WindowWidth));
+                Console.SetCursorPosition(0, Console.CursorTop - 1);
+            }
+            Console.Write(new string(' ', Console.WindowWidth));
+            Console.SetCursorPosition(0, Console.CursorTop);
+
+        }
 
         public void PrintIntro()
         {
@@ -524,14 +548,20 @@ namespace BattleShipServer
         public void MiddleWL(string offset, bool isFirst = false, bool OnlyWrite = false, int extraOffset = 0)
         {
             int o = offset.Length / 2 + extraOffset;
-            if (isFirst)
+            int newWidth = Console.WindowWidth / 2 - o;
+
+            if(newWidth >= 0)
             {
-                Console.SetCursorPosition(Console.WindowWidth / 2 - o, Console.WindowHeight / 3);
+                if (isFirst)
+                {
+                    Console.SetCursorPosition(newWidth, Console.WindowHeight / 3);
+                }
+                else
+                {
+                    Console.SetCursorPosition(newWidth, Console.CursorTop);
+                }
             }
-            else
-            {
-                Console.SetCursorPosition(Console.WindowWidth / 2 - o, Console.CursorTop);
-            }
+           
             if (OnlyWrite)
             {
                 Console.Write(offset);
@@ -541,6 +571,38 @@ namespace BattleShipServer
                 Console.WriteLine(offset);
             }
            
+        }
+
+        private void SetEnemyRadarLastHit(string myLastComPosition, string opHitStatus)
+        {
+            var statCode = opHitStatus.Split(" ")[0];
+            var statCode2First = statCode.Substring(0, 2);
+            var statCode3 = statCode.Substring(2, 1);
+            var respCode = new ResponseCode(statCode);
+            //Om det är miss:
+            if (statCode == "230")
+            {
+                var target = Radar.Targets.Where(t => t.GridPosition == myLastComPosition).FirstOrDefault();
+                target.IsAlreadyHit = true;
+            }
+            //Om det är träff på något skepp:
+            else if (statCode2First == "24")
+            {
+                var target = Radar.Targets.Where(t => t.GridPosition == myLastComPosition).FirstOrDefault();
+                target.IsAlreadyHit = true;
+                target.HasShip      = true;
+                Radar.SetShip(target, statCode3);
+                target.Ship.Hit();
+            }
+            //Om skeppet sjunker
+            else if (statCode2First == "25")
+            {
+                var target = Radar.Targets.Where(t => t.GridPosition == myLastComPosition).FirstOrDefault();
+                target.IsAlreadyHit = true;
+                target.HasShip      = true;
+                Radar.SetShip(target, statCode3);
+                target.Ship.Hit();
+            }
         }
     }
 }
