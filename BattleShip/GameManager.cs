@@ -102,14 +102,23 @@ namespace BattleShipServer
             }
             catch(IOException e)
             {
-                var ex = e;
+                Console.WriteLine(e.Message);
                 DisposeAll();
             }
-    
-            Console.SetCursorPosition(Console.WindowWidth / 2, Console.CursorTop +1);
-            //Console.WriteLine("-- DISCONNECTED --");
-            //Console.ReadKey();
+            catch (SocketException e)
+            {
+                Console.WriteLine($"Unknown hostname '{Host}'");
+                Console.WriteLine(e.Message);
+                DisposeAll();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Oops, Something went wrong");
+                Console.WriteLine(e.Message);
+                DisposeAll();
+            }
 
+            Console.SetCursorPosition(Console.WindowWidth / 2, Console.CursorTop +1);
         }
 
         public void Connect()
@@ -303,7 +312,12 @@ namespace BattleShipServer
                         {
                             opponentHitStatus = reader.ReadLine();
                             WriteColor(!IsHost, opponentHitStatus);
-                            opponentCommand = reader.ReadLine();
+
+                            if (opponentHitStatus.ToUpper() != "QUIT")
+                            {
+                                opponentCommand = reader.ReadLine();
+                            }
+
                             hitStatus = Read(opponentCommand, opponentHitStatus, myLastCommand);
 
                             if (hitStatus == "270")
@@ -333,13 +347,20 @@ namespace BattleShipServer
             try
             {
                 com1 = command.Split(" ")[0];
-                targ = command.Split(" ")[1];
                 mylastcomPosition = myLastCom.Split(" ")[1];
+                
             }
             catch (Exception)
             {}
 
-            if(mylastcomPosition != "" && opponentHitStatus != "")
+            try
+            {
+                targ = command.Split(" ")[1];
+            }
+            catch (Exception)
+            { }
+
+            if (mylastcomPosition != "" && opponentHitStatus != "")
             {
                 SetEnemyRadarLastHit(mylastcomPosition.ToUpper(), opponentHitStatus);
             }
@@ -350,7 +371,7 @@ namespace BattleShipServer
                 return "270";
             }
 
-            if (string.Equals(command.Trim(), "QUIT", StringComparison.InvariantCultureIgnoreCase))
+            if (string.Equals(command.Trim(), "QUIT", StringComparison.InvariantCultureIgnoreCase) || opponentHitStatus.ToUpper() == "QUIT")
             {
                 // TODO: Quit
                 if (IsHost)
@@ -502,11 +523,11 @@ namespace BattleShipServer
                     FixRow();
                     Console.WriteLine("[Command was empty (write 'HELP' for available commands)]");
                 }
-                else if (command == "RADAR" || command == "R" || command == "SHOWRADAR" || command == "RADARVIEW")
+                else if (command == "RADAR" || command == "R" || command == "SHOWRADAR" || command == "RADARVIEW" || command == "TARGET" || command == "TARGETGRID")
                 {
                     ShowRadar();
                 }
-                else if (command == "OCEAN" || command == "O" || command == "SHOWOCEAN" || command == "OCEANVIEW")
+                else if (command == "OCEAN" || command == "O" || command == "SHOWOCEAN" || command == "OCEANVIEW" || command == "OCEANGRID")
                 {
                     ShowOceanView();
                 }
@@ -555,21 +576,24 @@ namespace BattleShipServer
 
         private void DisposeAll()
         {
-            writer.Dispose();
-            reader.Dispose();
-            NetworkStream.Dispose();
+            if (writer != null)        writer.Dispose();
+            if (reader != null)        reader.Dispose();
+            if (NetworkStream != null) NetworkStream.Dispose();
 
-            Socket socket = Client.Client;
-            if (Client.Connected)
+            if (Client != null && Client.Connected)
             {
-                if (socket.Connected)
+                Socket socket = Client.Client;
+
+                if (socket != null && socket.Connected)
                 {
                     socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, true);
                     socket.Shutdown(SocketShutdown.Both);
                     socket.Disconnect(true);
                 }
+
                 Client.Dispose();
             }
+           
             //Client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);            
         }
 
@@ -632,8 +656,8 @@ namespace BattleShipServer
             HelpWL("FIRE <coordinate> - When the game has started, this is the command to fire at the enemy ship.");
             HelpWL("                    <coordinate> have to be replaced by something between A1 to J10...");
             HelpWL("                    ...example: 'FIRE C6'. Optional message after the coordinate can be applied.");
-            HelpWL("OCEAN             - Shows the Ocean View. This is your ships on a map.");
-            HelpWL("RADAR             - Shows where you have hit/missed previous shots to the enemy ships");
+            HelpWL("OCEAN             - Shows the Ocean Grid. This is your ships on a map.");
+            HelpWL("TARGET/RADAR      - Shows the Target Grid, where you have hit/missed previous shots to the enemy ships");
             HelpWL("HELP              - Shows help. Obviously you found it...");
             HelpWL("QUIT              - Quits the game and disconnects from the other player.");
 
