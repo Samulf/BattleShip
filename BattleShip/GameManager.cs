@@ -27,6 +27,7 @@ namespace BattleShipServer
         private NetworkStream NetworkStream;
         private StreamReader reader;
         private StreamWriter writer;
+        private int PortChangeCount = 0;
 
         public void Initialize()
         {
@@ -67,6 +68,7 @@ namespace BattleShipServer
                 } while (!portParsed);
                
                 StartListen(Port);
+                MiddleWL($"Listening on port: {Port}");
             }
             //Du är klient.
             else
@@ -93,11 +95,20 @@ namespace BattleShipServer
                 MiddleWL($"Port: {Port}");
            
             }
-            Connect();
-            Play();
+            try
+            {
+                Connect();
+                Play();
+            }
+            catch(IOException e)
+            {
+                var ex = e;
+                DisposeAll();
+            }
+    
             Console.SetCursorPosition(Console.WindowWidth / 2, Console.CursorTop +1);
-            Console.WriteLine("-- DISCONNECTED --");
-            Console.ReadKey();
+            //Console.WriteLine("-- DISCONNECTED --");
+            //Console.ReadKey();
 
         }
 
@@ -109,6 +120,7 @@ namespace BattleShipServer
                 {
                     MiddleWL("Väntar på att någon ska ansluta sig...");
                     Client = listener.AcceptTcpClient();
+                    Client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, true);
                     NetworkStream = Client.GetStream();
                     reader = new StreamReader(NetworkStream, Encoding.UTF8);
                     writer = new StreamWriter(NetworkStream, Encoding.UTF8) { AutoFlush = true };
@@ -191,6 +203,7 @@ namespace BattleShipServer
             //Om man är klient
             else
             {
+                //TODO: om host refusar porten (felsäkring)
                 Client = new TcpClient(Host, Port);
                 NetworkStream = Client.GetStream();
                 reader = new StreamReader(NetworkStream, Encoding.UTF8);
@@ -217,6 +230,7 @@ namespace BattleShipServer
 
                while (true)
                 {
+                    Console.WriteLine("(Write 'START' to start the game)");
                     var start = Console.ReadLine().ToUpper();
                     FixRow();
                     WriteColor(false, start);
@@ -278,6 +292,10 @@ namespace BattleShipServer
                         myLastCommand = Write();
                         if (myLastCommand == "QUIT")
                         {
+                            if (!IsHost)
+                            {
+                               WriteColor(true, reader.ReadLine());
+                            }
                             arePlaying = false;
                             break;
                         }
@@ -301,8 +319,7 @@ namespace BattleShipServer
                     arePlaying = false;
                 }
 
-                DisposeAll();
-
+                    DisposeAll();
             }
         }
 
@@ -340,15 +357,16 @@ namespace BattleShipServer
                 {
                     WriteColor(!IsHost, "The client wants to quit. (press any key to continue)");
                     Console.ReadKey();
+                    writer.WriteLine(RCodes.ConnectionClosed.FullString + " - You have quit the game.");
                     Client.Client.Disconnect(true);
-                    WriteColor(IsHost, RCodes.YouWin.FullString);
+                    WriteColor(IsHost, RCodes.YouWin.FullString + " - Client has disconnected.");
                     return "270";
                 }
                 //TODO: be servern att avsluta själv
                 else
                 {
                     WriteColor(IsHost, RCodes.YouWin.FullString);
-                    return "270";
+                    Answer = RCodes.SyntaxError.FullString + " (Host should quit, not client)";
                 }
          
             }
@@ -430,38 +448,11 @@ namespace BattleShipServer
 
         private string Write()
         {
-            string command = ReadCommandConsole();
-
-            //while (true)
-            //{
-            //Console.Write("Send: ");
-            //command = Console.ReadLine();
-
-            //    if (command.ToUpper() == "OCEAN")
-            //    {
-            //        ShowOceanView();
-            //    }
-            //    else if (command.ToUpper() == "RADAR")
-            //    {
-            //        ShowRadar();
-            //    }
-            //    else if (command.ToUpper() == "HELP")
-            //    {
-            //        Console.WriteLine("[PRINTING HELP]");
-            //    }
-            //    else if (command.ToUpper() == "QUIT")
-            //    {
-            //        Console.WriteLine("[QUIT GAME]");
-            //    }
-            //    else
-            //    {
-            //        break;
-            //    }
-            //}
+            string command = ReadCommandConsole().ToUpper();
            
-            if (command.ToUpper() == "QUIT" && IsHost)
+            if (command == "QUIT" && IsHost)
             {
-                writer.WriteLine("270 - You win.");
+                writer.WriteLine(RCodes.ConnectionClosed.FullString + " - Host has quit the game");
                 Console.Clear();
                 MiddleWL("YOU GAVE UP...", true);
                 Console.ReadKey();
@@ -470,9 +461,10 @@ namespace BattleShipServer
             else
             {
                 FixRow();
-                WriteColor(IsHost, command.ToUpper());
+                WriteColor(IsHost, command);
                 //Skriver i kanalen vad man själv skrev för command.
                 writer.WriteLine(command);
+                //WriteColor(true, reader.ReadLine());
             }        
 
             return command;
@@ -541,12 +533,23 @@ namespace BattleShipServer
             {
                 listener = new TcpListener(IPAddress.Any, port);
                 listener.Start();
-                MiddleWL($"Lyssnar på port: {port}");
             }
             catch (SocketException ex)
             {
-                MiddleWL($"Misslyckades att öppna socket. Troligtvis upptagen. {ex.Message}");
-                Environment.Exit(1);
+                PortChangeCount ++;
+                MiddleWL($"Failed to open socket. Probably in use.");
+                MiddleWL(ex.Message);
+                if(PortChangeCount > 200)
+                {
+                    Environment.Exit(1);
+                }
+                else
+                {
+                    StartListen(port + 1);
+                    Port = port + 1;
+                    MiddleWL($"Port changed to {Port}");
+                }
+
             }
         }
 
@@ -555,7 +558,19 @@ namespace BattleShipServer
             writer.Dispose();
             reader.Dispose();
             NetworkStream.Dispose();
-            Client.Dispose();
+
+            Socket socket = Client.Client;
+            if (Client.Connected)
+            {
+                if (socket.Connected)
+                {
+                    socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, true);
+                    socket.Shutdown(SocketShutdown.Both);
+                    socket.Disconnect(true);
+                }
+                Client.Dispose();
+            }
+            //Client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);            
         }
 
         private void FixRow()

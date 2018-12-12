@@ -21,20 +21,17 @@ namespace BattleShip
             while (playing)
             {
                 GameManager.Initialize();
-                Console.Clear();
-                Console.SetCursorPosition(Console.WindowWidth / 2, Console.WindowHeight / 2);
-                Console.WriteLine("-- DISCONNECTED --");
-                Console.SetCursorPosition(Console.WindowWidth / 2, (Console.WindowHeight / 2) +1);
-                Console.WriteLine("CONNECT AGAIN? (Y/N)");
+                Console.WriteLine("\n\n      -- DISCONNECTED --");
+                Console.WriteLine("     CONNECT AGAIN? (Y/N)");
 
                 var ans = Console.ReadLine();
+                Console.Clear();
                 if (ans.ToUpper() == "Y")
                 {
-                    GameManager.Initialize();
+                    GameManager = new GameManager();
                 }
                 else
                 {
-                    Console.Clear();
                     Console.SetCursorPosition(Console.WindowWidth / 2, Console.WindowHeight / 2);
                     Console.WriteLine("GOOD BYE");
                     Console.ReadKey();
