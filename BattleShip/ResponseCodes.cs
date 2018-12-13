@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace BattleShipServer
@@ -47,6 +49,26 @@ namespace BattleShipServer
             ConnectionClosed = new ResponseCode("270", "270 Connection closed");
             SyntaxError      = new ResponseCode("500", "500 Syntax error");
             SequenceError    = new ResponseCode("501", "501 Sequence error");
+        }
+
+        public string GetReponseCodeByCode(string code)
+        {
+            if (code == "230") return Miss.FullString;
+            else if (code == "241") return HitCarrier.FullString;
+            else if (code == "242") return HitBattleShip.FullString;
+            else if (code == "243") return HitDestroyer.FullString;
+            else if (code == "244") return HitSubmarine.FullString;
+            else if (code == "245") return HitPatrolBoat.FullString;
+            else if (code == "251") return SunkCarrier.FullString;
+            else if (code == "252") return SunkBattleShip.FullString;
+            else if (code == "253") return SunkDestroyer.FullString;
+            else if (code == "254") return SunkSubmarine.FullString;
+            else if (code == "255") return SunkPatrolBoat.FullString;
+            else if (code == "260") return YouWin.FullString;
+            else if (code == "270") return ConnectionClosed.FullString;
+            else if (code == "501") return SequenceError.FullString;
+            else if (code == "500") return SyntaxError.FullString;
+            else return "fock";
         }
 
     }

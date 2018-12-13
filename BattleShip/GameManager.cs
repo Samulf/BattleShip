@@ -311,7 +311,7 @@ namespace BattleShipServer
                         }
                         else
                         {
-                            opponentHitStatus = reader.ReadLine();
+                            opponentHitStatus = RemoveUnwantedAsciiFromHead(reader.ReadLine());
                             WriteColor(!IsHost, opponentHitStatus);
 
                             if (opponentHitStatus.ToUpper() != "QUIT")
@@ -337,7 +337,7 @@ namespace BattleShipServer
                         }
                     }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     arePlaying = false;
                 }
@@ -753,11 +753,16 @@ namespace BattleShipServer
         private void SetEnemyRadarLastHit(string myLastComPosition, string opHitStatus)
         {
             //TODO: Ifall andra spelet skickar konstig hitstatus.
+
+            //var SplittedStatCode = opHitStatus.Split(" ")[0];
+
             var statCode = opHitStatus.Split(" ")[0];
             var statCode2First = statCode.Substring(0, 2);
             var statCode3 = statCode.Substring(2, 1);
+
             //Om det är miss:
-            if (statCode == "230")
+
+            if (string.Equals(statCode, RCodes.Miss.Code))
             {
                 var target = Radar.Targets.Where(t => t.GridPosition == myLastComPosition).FirstOrDefault();
                 target.IsAlreadyHit = true;
@@ -780,6 +785,56 @@ namespace BattleShipServer
                 Radar.SetShip(target, statCode3);
                 target.Ship.Hit();
             }
+        }
+
+        private string RemoveUnwantedAscii(string text)
+        {
+            byte[] asciivalues = Encoding.ASCII.GetBytes(text);
+
+            string freshString = "";
+
+            foreach (var b in asciivalues)
+            {
+                if (b > 47 && b < 58)
+                {
+                    var sign = (char)b;
+                    freshString += sign.ToString();
+                }
+            }
+
+            return freshString;
+        }
+
+        private string RemoveUnwantedAsciiFromHead(string text)
+        {
+            string stringToReturn = "";
+
+            string freshString = "";
+
+            var head = text.Split(" ")[0];
+            var theRest = text.Split(" ")[1];
+
+            byte[] asciivalues = Encoding.ASCII.GetBytes(head);
+
+            foreach (var b in asciivalues)
+            {
+                if (b > 47 && b < 58)
+                {
+                    var sign = (char)b;
+                    freshString += sign.ToString();
+                }
+            }
+
+            var rcode = RCodes.GetReponseCodeByCode(freshString);
+            if (rcode == "fock")
+            {
+               stringToReturn = freshString += $" {theRest}";
+            }
+            else
+            {
+                stringToReturn = rcode;
+            }
+            return stringToReturn;
         }
     }
 }
