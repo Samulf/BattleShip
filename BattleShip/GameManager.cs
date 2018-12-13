@@ -36,7 +36,8 @@ namespace BattleShipServer
             MiddleWL("Ships are placed...\n", true);
             MiddleWL("Username: ", false, true, 8);
             Username = Console.ReadLine();
-            //if (Username == "h") ShowHelp();
+            if (Username == "o") ShowOceanView();
+            if (Username == "r") ShowRadar();
             //Console.ReadKey();
             Console.Clear();
             MiddleWL($"Välkommen {Username}!", true);
@@ -143,12 +144,12 @@ namespace BattleShipServer
 
                         while (true)
                         {
-                            var text1 = reader.ReadLine();
-                            WriteColor(false, text1);
+                            var helloText = reader.ReadLine();
+                            WriteColor(false, helloText);
 
                             try
                             {
-                                var part1 = text1.Split()[0];
+                                var part1 = helloText.Split()[0];
 
                                 if (part1.ToUpper() == "QUIT")
                                 {
@@ -157,7 +158,7 @@ namespace BattleShipServer
                                 }
                                 else if (part1.ToUpper() == "HELLO" || part1.ToUpper() == "HELO")
                                 {
-                                    var part2 = text1.Split()[1];
+                                    var part2 = helloText.Split()[1];
                                     Player2 = part2;
                                     writer.WriteLine($"{RCodes.RemotePlayerName.Code} {Username}");
                                     WriteColor(true, $"{RCodes.RemotePlayerName.Code} {Username}");
@@ -320,11 +321,19 @@ namespace BattleShipServer
 
                             hitStatus = Read(opponentCommand, opponentHitStatus, myLastCommand);
 
-                            if (hitStatus == "270")
+                            //Motståndaren vann
+                            if (hitStatus == "270" || hitStatus.Split(" ")[0] == "260")
                             {
                                 arePlaying = false;
                                 break;
                             }
+                            //Du vann
+                            else if (hitStatus == "260")
+                            {
+                                arePlaying = false;
+                                break;
+                            }
+
                         }
                     }
                 }
@@ -371,6 +380,14 @@ namespace BattleShipServer
                 return "270";
             }
 
+
+            if (opponentHitStatus.Split(" ")[0] == "260" || com1 == "260")
+            {
+
+                WriteColor(IsHost, RCodes.YouWin.FullString);
+                return "260";
+            }
+
             if (string.Equals(command.Trim(), "QUIT", StringComparison.InvariantCultureIgnoreCase) || opponentHitStatus.ToUpper() == "QUIT")
             {
                 // TODO: Quit
@@ -396,10 +413,7 @@ namespace BattleShipServer
                // TODO: fixa hjälp.
                 Answer = "NO HELP FOR YOU";
             }
-            else if (string.Equals(command.Trim(), "DATE", StringComparison.InvariantCultureIgnoreCase))
-            {
-                Answer = DateTime.UtcNow.ToString("o");
-            }
+           
             else if (string.Equals(com1, "FIRE", StringComparison.InvariantCultureIgnoreCase))
             {
                 if (com1 !=  "" && targ != "")
@@ -447,22 +461,31 @@ namespace BattleShipServer
                 }
                 
             }
+            else if(com1 == "HELLO" || com1 == "HELO" || com1 == "START")
+            {
+                Answer = $"{RCodes.SequenceError.FullString}";
+            }
 
             else
             {
                 Answer = $"{RCodes.SyntaxError.FullString}";
             }
 
-            //if(opponentHitStatus != "")
-            //{
-            //    //Skriver ut om man fick träff eller miss på sitt förra command mot motståndaren.
-            //    WriteColor(!IsHost, opponentHitStatus);
-            //}
             //Skriver ut vad motståndaren gjorde för command.
             WriteColor(!IsHost, $"{Player2}: {command.ToUpper()}");
 
             //Skriver ut vad motståndarens command gjorde (hit eller miss).
-            WriteColor(IsHost, Answer);
+            //if (!IsHost) Answer = RCodes.YouWin.FullString;
+
+            if (Answer.Split(" ")[0] == "260")
+            {
+                WriteColor(IsHost, $"{Player2} won the game! You lose...");
+            }
+            else
+            {
+                WriteColor(IsHost, Answer);
+            }
+
             writer.WriteLine(Answer);
             return Answer;
         }
@@ -607,16 +630,16 @@ namespace BattleShipServer
         private void ShowOceanView()
         {
             OceanView.Print();
+
             Console.ReadKey();
 
-            for (int i = 0; i < 26; i++)
+            for (int i = 0; i < 27; i++)
             {
-                    Console.Write(new string(' ', Console.WindowWidth));
-                    Console.SetCursorPosition(0, Console.CursorTop - 1);
+                Console.Write(new string(' ', Console.WindowWidth));
+                Console.SetCursorPosition(0, Console.CursorTop - 1);
             }
             Console.Write(new string(' ', Console.WindowWidth));
             Console.SetCursorPosition(0, Console.CursorTop);
-
         }
 
         private void ShowRadar()
@@ -624,14 +647,13 @@ namespace BattleShipServer
             Radar.Print();
             Console.ReadKey();
 
-            for (int i = 0; i < 26; i++)
+            for (int i = 0; i < 27; i++)
             {
                 Console.Write(new string(' ', Console.WindowWidth));
                 Console.SetCursorPosition(0, Console.CursorTop - 1);
             }
             Console.Write(new string(' ', Console.WindowWidth));
             Console.SetCursorPosition(0, Console.CursorTop);
-
         }
 
         private void ShowHelp()

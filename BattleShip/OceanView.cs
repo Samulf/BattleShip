@@ -298,7 +298,7 @@ namespace BattleShipServer
                 Console.WriteLine("\n                    ----- OCEAN VIEW -----");
             }
             Console.WriteLine("                    (press 'Enter' to hide)");
-
+            
             for (int i = 0; i < 10; i++)
             {
 
@@ -342,19 +342,35 @@ namespace BattleShipServer
                     Console.Write("     ");
                     Console.BackgroundColor = ConsoleColor.DarkGray;
                     Console.ForegroundColor = ConsoleColor.Black;
-                    Console.Write($"M!");
+                    Console.Write($" M ");
                     Console.BackgroundColor = ConsoleColor.Black;
                     Console.ForegroundColor = ConsoleColor.DarkGray;
                     Console.Write($" = Miss!");
                 }
 
                 Console.ResetColor();
-                Console.WriteLine("\n--------------------------------");
+                if (i == 0)
+                {
+                    Console.ForegroundColor = ConsoleColor.DarkGreen;
+                    Console.WriteLine("\n     1   2   3   4   5   6   7   8   9   10");
+                    Console.ResetColor();
+                    Console.WriteLine("   -----------------------------------------");
+                }
+                else
+                {
+                    Console.WriteLine("\n   -----------------------------------------");
+                }
+
+                Console.ForegroundColor = ConsoleColor.DarkGreen;
+                
+                Console.Write($" {Letters[i]} ");
+                Console.ResetColor();
                 Console.Write("|");
 
-               
                 for (int j = 1; j < 11; j++)
                 {
+
+
                     var position = Letters[i] + j;
                     var target = Targets.Find(t => t.GridPosition == position);
 
@@ -387,17 +403,32 @@ namespace BattleShipServer
                         {
                             Console.BackgroundColor = ConsoleColor.DarkRed;
                         }
-                        Console.Write(target.GridPosition);
+
+                        if (target.GridPosition.Length == 2)
+                        {
+                            Console.Write(target.GridPosition + " ");
+                        }
+                        else
+                        {
+                            Console.Write(target.GridPosition);
+                        }
                     }
                     else if (target.IsAlreadyHit)
                     {
                         Console.BackgroundColor = ConsoleColor.DarkGray;
                         Console.ForegroundColor = ConsoleColor.Black;
-                        Console.Write($"M!");
+                        Console.Write($" M ");
                     }
                     else
                     {
-                        Console.Write(target.GridPosition);
+                        if (target.GridPosition.Length == 2)
+                        {
+                            Console.Write(target.GridPosition + " ");
+                        }
+                        else
+                        {
+                            Console.Write(target.GridPosition);
+                        }
                     }
 
                     Console.ResetColor();
