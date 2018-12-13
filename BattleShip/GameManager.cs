@@ -807,12 +807,10 @@ namespace BattleShipServer
 
         private string RemoveUnwantedAsciiFromHead(string text)
         {
-            string stringToReturn = "";
-
             string freshString = "";
 
             var head = text.Split(" ")[0];
-            var theRest = text.Split(" ")[1];
+            var theRest = text.Replace(head, "");
 
             byte[] asciivalues = Encoding.ASCII.GetBytes(head);
 
@@ -824,17 +822,7 @@ namespace BattleShipServer
                     freshString += sign.ToString();
                 }
             }
-
-            var rcode = RCodes.GetReponseCodeByCode(freshString);
-            if (rcode == "fock")
-            {
-               stringToReturn = freshString += $" {theRest}";
-            }
-            else
-            {
-                stringToReturn = rcode;
-            }
-            return stringToReturn;
+            return freshString + theRest;
         }
     }
 }
