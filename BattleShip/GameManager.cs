@@ -22,16 +22,27 @@ namespace BattleShipServer
         public OceanView     Radar      { get; set; } = new OceanView(true);
 
         private readonly Random rnd = new Random();
-        private TcpListener listener;
-        private TcpClient Client;
-        private NetworkStream NetworkStream;
-        private StreamReader reader;
-        private StreamWriter writer;
-        private int PortChangeCount = 0;
+        private TcpListener     listener;
+        private TcpClient       Client;
+        private NetworkStream   NetworkStream;
+        private StreamReader    reader;
+        private StreamWriter    writer;
+        private int             PortChangeCount = 0;
+        private int             ErrorCount      = 0;
+        private int             MyErrorCount    = 0;
+        private bool            NoError
+        {   get
+            {
+                return (ErrorCount < 4 && MyErrorCount < 4);
+            }
+            set { }
+        }
 
         public void Initialize()
         {
             PrintIntro();
+
+            NoError = true;
 
             MiddleWL("Ships are placed...\n", true);
             MiddleWL("Username: ", false, true, 8);
@@ -98,8 +109,14 @@ namespace BattleShipServer
             }
             try
             {
-                Connect();
-                Play();
+                bool isGood = Connect();
+
+                if (isGood && NoError)
+                {
+                    Play();
+                }
+
+                DisposeAll();
             }
             catch(IOException e)
             {
@@ -122,8 +139,10 @@ namespace BattleShipServer
             Console.SetCursorPosition(Console.WindowWidth / 2, Console.CursorTop +1);
         }
 
-        public void Connect()
+        public bool Connect()
         {
+            bool AllGood = false;
+
             if (IsHost)
             {
                 while (true)
@@ -137,6 +156,8 @@ namespace BattleShipServer
 
                     if (Client.Connected)
                     {
+                        AllGood = true;
+
                         Console.Clear();
                         Console.WriteLine($"Klient har anslutit sig {Client.Client.RemoteEndPoint}!");
                         writer.WriteLine(RCodes.BattleShip.FullString);
@@ -145,6 +166,7 @@ namespace BattleShipServer
                         while (true)
                         {
                             var helloText = reader.ReadLine();
+                            Error(helloText, false);
                             WriteColor(false, helloText);
 
                             try
@@ -154,6 +176,7 @@ namespace BattleShipServer
                                 if (part1.ToUpper() == "QUIT")
                                 {
                                     //TODO: Quit
+                                    AllGood = false;
                                     break;
                                 }
                                 else if (part1.ToUpper() == "HELLO" || part1.ToUpper() == "HELO")
@@ -166,23 +189,33 @@ namespace BattleShipServer
                                 }
                                 else
                                 {
+                                    //TODO: 500 kod!
                                     writer.Write(RCodes.SequenceError.FullString);
                                     WriteColor(true, RCodes.SequenceError.FullString);
+                                    Error("501", true);
                                 }
                             }
                             catch (Exception)
                             {
+                                //TODO: 500 kod!
                                 writer.Write(RCodes.SequenceError.FullString);
                                 WriteColor(true, RCodes.SequenceError.FullString);
+                                Error("500", true);
+                                writer.Write(RCodes.ConnectionClosed.FullString);
+                                Console.WriteLine(RCodes.SequenceError.FullString);
+                                AllGood = false;
+                                break;
                             }
                         }
 
-                        while (true)
+                        while (true && NoError)
                         {
                             var start = reader.ReadLine();
                             WriteColor(false, start);
                             if (start.ToUpper() == "START")
                             {
+                                ErrorCount = 0;
+
                                 int randomstart = rnd.Next(2);
 
                                 if(randomstart == 0)
@@ -201,8 +234,9 @@ namespace BattleShipServer
                             }
                             else
                             {
-                                writer.Write(RCodes.SequenceError.FullString);
-                                WriteColor(true, RCodes.SequenceError.FullString);
+                                writer.WriteLine($"{RCodes.SequenceError.FullString} (Client starts the game by writing 'START')");
+                                WriteColor(true, $"{RCodes.SequenceError.FullString} (Client starts the game by writing 'START')");
+                                Error("501", true);
                             }
                         }
                         break;
@@ -221,57 +255,76 @@ namespace BattleShipServer
 
                 Console.Clear();
                 Console.WriteLine($"Ansluten till {Client.Client.RemoteEndPoint}");
-                WriteColor(true, reader.ReadLine());
+                var protocolFirst = reader.ReadLine();
+                WriteColor(true, protocolFirst);
 
-                writer.WriteLine($"HELLO {Username}");
-                WriteColor(false, $"HELLO {Username}");
-
-                try
+                if (protocolFirst.ToUpper() != "210 BATTLESHIP/1.0" || protocolFirst.ToUpper().Replace(" ", "") != "210BATTLESHIP/1.0")
                 {
-                    var text1 = reader.ReadLine();
-                    Player2 = text1.Split()[1];
-                    WriteColor(true, text1);
+                    //TODO: 500 kod!
+                    writer.WriteLine($"{RCodes.ConnectionClosed.FullString} - Incorrect protocol from host");
+                    Console.WriteLine($"{RCodes.ConnectionClosed.FullString} - Incorrect protocol from host");
+                    Console.ReadKey();
                 }
-                catch (Exception)
+                else
                 {
-                    Player2 = "(Host)";
-                    WriteColor(true, "220 " +Player2);
-                }
+                    AllGood = true;
 
-               while (true)
-                {
-                    Console.WriteLine("(Write 'START' to start the game)");
-                    var start = Console.ReadLine().ToUpper();
-                    FixRow();
-                    WriteColor(false, start);
-                    writer.WriteLine(start);
-                    var whoStarts = reader.ReadLine();
-                    WriteColor(false, whoStarts);
+                    writer.WriteLine($"HELLO {Username}");
+                    WriteColor(false, $"HELLO {Username}");
+
                     try
                     {
-                        var code = whoStarts.Split(" ")[0];
-                        if (code == RCodes.HostStarts.Code)
-                        {
-                            //TODO: Host startar
-                            HostStarts = true;
-                            break;
-                        }
-                        if (code == RCodes.ClientStarts.Code)
-                        {
-                            //TODO: Client startar
-                            HostStarts = false;
-                            break;
-                        }
+                        var text1 = reader.ReadLine();
+                        Error(text1, false);
+                        Player2 = text1.Split()[1];
+                        WriteColor(true, text1);
                     }
                     catch (Exception)
                     {
-                        Console.WriteLine("What??");
-                        throw;
+                        Error("500", true);
+                        Player2 = "(Host)";
+                        WriteColor(true, "220 " + Player2);
                     }
-                    WriteColor(true, whoStarts);
+
+                    while (true && NoError)
+                    {
+                        Console.WriteLine("(Write 'START' to start the game)");
+                        var start = Console.ReadLine().ToUpper();
+                        FixRow();
+                        WriteColor(false, start);
+                        writer.WriteLine(start);
+                        var whoStarts = reader.ReadLine();
+
+                        Error(whoStarts, false);
+
+                        WriteColor(true, whoStarts);
+                        try
+                        {
+                            var code = whoStarts.Split(" ")[0];
+
+                            if (code == RCodes.HostStarts.Code)
+                            {
+                                //TODO: Host startar
+                                HostStarts = true;
+                                break;
+                            }
+                            else if (code == RCodes.ClientStarts.Code)
+                            {
+                                //TODO: Client startar
+                                HostStarts = false;
+                                break;
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            Console.WriteLine("What??");
+                            throw;
+                        }
+                        //WriteColor(true, whoStarts);
+                    }
                 }
-             
             }
+            return AllGood;
         }
 
         public void Play()
@@ -285,7 +338,7 @@ namespace BattleShipServer
             bool arePlaying = true;
             string myLastCommand = "";
 
-            while (arePlaying)
+            while (arePlaying && NoError)
             {
                 try
                 {
@@ -293,10 +346,15 @@ namespace BattleShipServer
                     if ((IsHost && !HostStarts) || (!IsHost && HostStarts))
                     {
                         opponentCommand = reader.ReadLine();
-                        hitStatus = Read(opponentCommand);
+                        Error(opponentCommand, false);
+                        if (NoError)
+                        {
+                            hitStatus = Read(opponentCommand);
+                            Error(hitStatus, true);
+                        }
                     }
 
-                    while (Client.Connected)
+                    while (Client.Connected && NoError)
                     {
                         //TODO: fel!?
                         myLastCommand = Write();
@@ -312,6 +370,7 @@ namespace BattleShipServer
                         else
                         {
                             opponentHitStatus = RemoveUnwantedAsciiFromHead(reader.ReadLine());
+                            Error(opponentHitStatus, false);
                             WriteColor(!IsHost, opponentHitStatus);
 
                             if (opponentHitStatus.ToUpper() != "QUIT")
@@ -320,9 +379,10 @@ namespace BattleShipServer
                             }
 
                             hitStatus = Read(opponentCommand, opponentHitStatus, myLastCommand);
+                            Error(hitStatus, true);
 
                             //Motståndaren vann
-                            if (hitStatus == "270" || hitStatus.Split(" ")[0] == "260")
+                            if (hitStatus == "270" || hitStatus.Split(" ")[0] == "260" || NoError == false) 
                             {
                                 arePlaying = false;
                                 break;
@@ -341,8 +401,6 @@ namespace BattleShipServer
                 {
                     arePlaying = false;
                 }
-
-                    DisposeAll();
             }
         }
 
@@ -823,6 +881,42 @@ namespace BattleShipServer
                 }
             }
             return freshString + theRest;
+        }
+
+        public void Error(string t, bool me)
+        {
+            var c = t.Substring(0, 3);
+
+            if (c == RCodes.SequenceError.Code || c == RCodes.SyntaxError.Code)
+            {
+                if (me)
+                {
+                    MyErrorCount++;
+                    if (MyErrorCount > 3)
+                    {
+                        NoError = false;
+                    }
+                }
+                else
+                {
+                    ErrorCount++;
+                    if (ErrorCount >= 3)
+                    {
+                        NoError = false;
+                    }
+                }
+            }
+            else
+            {
+                if (me)
+                {
+                    MyErrorCount = 0;
+                }
+                else
+                {
+                    ErrorCount = 0;
+                }
+            }
         }
     }
 }
