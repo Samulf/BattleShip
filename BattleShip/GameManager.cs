@@ -49,7 +49,6 @@ namespace BattleShipServer
             Username = Console.ReadLine();
             if (Username == "o") ShowOceanView();
             if (Username == "r") ShowRadar();
-            //Console.ReadKey();
             Console.Clear();
             MiddleWL($"Välkommen {Username}!", true);
 
@@ -175,7 +174,6 @@ namespace BattleShipServer
 
                                 if (part1.ToUpper() == "QUIT")
                                 {
-                                    //TODO: Quit
                                     AllGood = false;
                                     break;
                                 }
@@ -189,7 +187,6 @@ namespace BattleShipServer
                                 }
                                 else
                                 {
-                                    //TODO: 500 kod!
                                     writer.Write(RCodes.SequenceError.FullString);
                                     WriteColor(true, RCodes.SequenceError.FullString);
                                     Error("501", true);
@@ -197,7 +194,6 @@ namespace BattleShipServer
                             }
                             catch (Exception)
                             {
-                                //TODO: 500 kod!
                                 writer.Write(RCodes.SequenceError.FullString);
                                 WriteColor(true, RCodes.SequenceError.FullString);
                                 Error("500", true);
@@ -247,7 +243,6 @@ namespace BattleShipServer
             //Om man är klient
             else
             {
-                //TODO: om host refusar porten (felsäkring)
                 Client = new TcpClient(Host, Port);
                 NetworkStream = Client.GetStream();
                 reader = new StreamReader(NetworkStream, Encoding.UTF8);
@@ -260,7 +255,6 @@ namespace BattleShipServer
 
                 if (protocolFirst.ToUpper() != "210 BATTLESHIP/1.0" || protocolFirst.ToUpper().Replace(" ", "") != "210BATTLESHIP/1.0")
                 {
-                    //TODO: 500 kod!
                     writer.WriteLine($"{RCodes.ConnectionClosed.FullString} - Incorrect protocol from host");
                     Console.WriteLine($"{RCodes.ConnectionClosed.FullString} - Incorrect protocol from host");
                     Console.ReadKey();
@@ -304,13 +298,13 @@ namespace BattleShipServer
 
                             if (code == RCodes.HostStarts.Code)
                             {
-                                //TODO: Host startar
+                                //Host startar
                                 HostStarts = true;
                                 break;
                             }
                             else if (code == RCodes.ClientStarts.Code)
                             {
-                                //TODO: Client startar
+                                //Client startar
                                 HostStarts = false;
                                 break;
                             }
@@ -356,7 +350,6 @@ namespace BattleShipServer
 
                     while (Client.Connected && NoError)
                     {
-                        //TODO: fel!?
                         myLastCommand = Write();
                         if (myLastCommand == "QUIT")
                         {
@@ -399,6 +392,8 @@ namespace BattleShipServer
                 }
                 catch (Exception e)
                 {
+                    Console.WriteLine("Something went wrong here.");
+                    writer.WriteLine("Something went wrong here.");
                     arePlaying = false;
                 }
             }
@@ -441,14 +436,12 @@ namespace BattleShipServer
 
             if (opponentHitStatus.Split(" ")[0] == "260" || com1 == "260")
             {
-
                 WriteColor(IsHost, RCodes.YouWin.FullString);
                 return "260";
             }
 
             if (string.Equals(command.Trim(), "QUIT", StringComparison.InvariantCultureIgnoreCase) || opponentHitStatus.ToUpper() == "QUIT")
             {
-                // TODO: Quit
                 if (IsHost)
                 {
                     WriteColor(!IsHost, "The client wants to quit. (press any key to continue)");
@@ -458,7 +451,6 @@ namespace BattleShipServer
                     WriteColor(IsHost, RCodes.YouWin.FullString + " - Client has disconnected.");
                     return "270";
                 }
-                //TODO: be servern att avsluta själv
                 else
                 {
                     WriteColor(IsHost, RCodes.YouWin.FullString);
@@ -468,7 +460,6 @@ namespace BattleShipServer
             }
             else if (string.Equals(command.Trim(), "HELP", StringComparison.InvariantCultureIgnoreCase))
             {
-               // TODO: fixa hjälp.
                 Answer = "NO HELP FOR YOU";
             }
            
@@ -600,7 +591,6 @@ namespace BattleShipServer
 
                 if (command == "" || string.IsNullOrEmpty(command))
                 {
-                    //TODO: detta kan bli fel (om man lämnar commanden tom).
                     FixRow();
                     Console.WriteLine("[Command was empty (write 'HELP' for available commands)]");
                 }
@@ -810,16 +800,11 @@ namespace BattleShipServer
 
         private void SetEnemyRadarLastHit(string myLastComPosition, string opHitStatus)
         {
-            //TODO: Ifall andra spelet skickar konstig hitstatus.
-
-            //var SplittedStatCode = opHitStatus.Split(" ")[0];
-
             var statCode = opHitStatus.Split(" ")[0];
             var statCode2First = statCode.Substring(0, 2);
             var statCode3 = statCode.Substring(2, 1);
 
             //Om det är miss:
-
             if (string.Equals(statCode, RCodes.Miss.Code))
             {
                 var target = Radar.Targets.Where(t => t.GridPosition == myLastComPosition).FirstOrDefault();
