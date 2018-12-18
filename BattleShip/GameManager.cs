@@ -267,10 +267,12 @@ namespace BattleShipServer
 
                 Console.Clear();
                 Console.WriteLine($"Ansluten till {Client.Client.RemoteEndPoint}");
-                var protocolFirst = reader.ReadLine();
+
+                var protocolFirst = RemoveUnwantedAsciiFromHead(reader.ReadLine());
+
                 WriteColor(true, protocolFirst);
 
-                if (protocolFirst.ToUpper() != "210 BATTLESHIP/1.0" || protocolFirst.ToUpper().Replace(" ", "") != "210BATTLESHIP/1.0")
+                if (protocolFirst.ToUpper() != "210 BATTLESHIP/1.0" && protocolFirst.ToUpper().Replace(" ", "") != "210BATTLESHIP/1.0")
                 {
                     writer.WriteLine($"{RCodes.ConnectionClosed.FullString} - Incorrect protocol from host");
                     Console.WriteLine($"{RCodes.ConnectionClosed.FullString} - Incorrect protocol from host");
@@ -285,10 +287,10 @@ namespace BattleShipServer
 
                     try
                     {
-                        var text1 = reader.ReadLine();
-                        Error(text1, false);
-                        Player2 = text1.Split()[1];
-                        WriteColor(true, text1);
+                        var hostGreets = RemoveUnwantedAsciiFromHead(reader.ReadLine());
+                        Error(hostGreets, false);
+                        Player2 = hostGreets.Split()[1];
+                        WriteColor(true, hostGreets);
                     }
                     catch (Exception)
                     {
@@ -304,7 +306,8 @@ namespace BattleShipServer
                         FixRow();
                         WriteColor(false, start);
                         writer.WriteLine(start);
-                        var whoStarts = reader.ReadLine();
+
+                        var whoStarts = RemoveUnwantedAsciiFromHead(reader.ReadLine());
 
                         Error(whoStarts, false);
 
@@ -580,19 +583,27 @@ namespace BattleShipServer
                     if (NiceMode)
                     {
                         writer.WriteLine(RCodes.SequenceError.FullString);
+                        Error("501", true);
                         var newCom = reader.ReadLine();
+                        Error(newCom, false);
                         Answer = Read(newCom, opponentHitStatus, myLastCom);
                     }
                 }
                 else
                 {
-                    if (NiceMode)
+                    if (!NoError)
+                    {
+                        Answer = command;
+                    }
+                    while (NiceMode && NoError)
                     {
                         writer.WriteLine(RCodes.SyntaxError.FullString);
+                        Error("500", true);
                         var newCom = reader.ReadLine();
+                        Error(newCom, false);
                         Answer = Read(newCom, opponentHitStatus, myLastCom);
                     }
-                    else
+                    if (!NiceMode)
                     {
                         Answer = $"{RCodes.SyntaxError.FullString}";
                     }
