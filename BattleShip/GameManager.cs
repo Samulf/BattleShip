@@ -28,6 +28,7 @@ namespace BattleShipServer
         private StreamReader    reader;
         private StreamWriter    writer;
         private int             PortChangeCount = 0;
+        private bool            NiceMode = true;
         private int             ErrorCount      = 0;
         private int             MyErrorCount    = 0;
         private bool            NoError
@@ -37,14 +38,24 @@ namespace BattleShipServer
             }
             set { }
         }
+        private string          Mode
+        {
+            get
+            {
+                return NiceMode ? "NICE MODE" : "BRUTAL MODE";
+            }
+            set { }
+        }
 
         public void Initialize()
         {
             PrintIntro();
+            PrintMode();
 
             NoError = true;
 
-            MiddleWL("Ships are placed...\n", true);
+            MiddleWL($"{Mode}\n", true);
+            MiddleWL("Ships are placed...\n");
             MiddleWL("Username: ", false, true, 8);
             Username = Console.ReadLine();
             if (Username == "o") ShowOceanView();
@@ -187,7 +198,7 @@ namespace BattleShipServer
                                 }
                                 else
                                 {
-                                    writer.Write(RCodes.SequenceError.FullString);
+                                    writer.WriteLine(RCodes.SequenceError.FullString);
                                     WriteColor(true, RCodes.SequenceError.FullString);
                                     Error("501", true);
                                 }
@@ -227,6 +238,12 @@ namespace BattleShipServer
                                     HostStarts = true;
                                 }
                                 break;
+                            }
+                            else if (start.ToUpper() == "HELP")
+                            {
+                                var help = WriteHelpForClient(true);
+                                writer.WriteLine(help);
+                                Console.WriteLine("[Client was given help]");
                             }
                             else
                             {
@@ -344,7 +361,20 @@ namespace BattleShipServer
                         if (NoError)
                         {
                             hitStatus = Read(opponentCommand);
+
+                            WriteColor(!IsHost, $"{Player2}: {opponentCommand.ToUpper()}");
+                            if (hitStatus.Split(" ")[0] == "260")
+                            {
+                                //TODO: ta bort
+                                WriteColor(IsHost, $"{Player2} won the game! You lose...");
+                            }
+                            else
+                            {
+                                WriteColor(IsHost, hitStatus);
+                            }
+                            writer.WriteLine(hitStatus);
                             Error(hitStatus, true);
+
                         }
                     }
 
@@ -366,13 +396,36 @@ namespace BattleShipServer
                             Error(opponentHitStatus, false);
                             WriteColor(!IsHost, opponentHitStatus);
 
-                            if (opponentHitStatus.ToUpper() != "QUIT")
+                            while(NiceMode && (opponentHitStatus.Split(" ")[0] == RCodes.SyntaxError.Code || opponentHitStatus.Split(" ")[0] == RCodes.SequenceError.Code) && NoError)
+                            {
+                                myLastCommand = Write();
+                                opponentHitStatus = RemoveUnwantedAsciiFromHead(reader.ReadLine());
+                                Error(opponentHitStatus, false);
+                                WriteColor(!IsHost, opponentHitStatus);
+                            }
+
+                            if (NoError && opponentHitStatus.ToUpper() != "QUIT")
                             {
                                 opponentCommand = reader.ReadLine();
                             }
 
                             hitStatus = Read(opponentCommand, opponentHitStatus, myLastCommand);
+
+                            WriteColor(!IsHost, $"{Player2}: {opponentCommand.ToUpper()}");
+
+                            if (hitStatus.Split(" ")[0] == "260")
+                            {
+                                //TODO: ta bort
+                                WriteColor(IsHost, $"{Player2} won the game! You lose...");
+                            }
+                            else
+                            {
+                                WriteColor(IsHost, hitStatus);
+                            }
+                            writer.WriteLine(hitStatus);
                             Error(hitStatus, true);
+
+
 
                             //Motståndaren vann
                             if (hitStatus == "270" || hitStatus.Split(" ")[0] == "260" || NoError == false) 
@@ -401,142 +454,158 @@ namespace BattleShipServer
 
         private string Read(string command, string opponentHitStatus = "", string myLastCom = "")
         {
-            string Answer = "";
-            string com1 =   "";
-            string targ =   "";
-            string mylastcomPosition = "";
+            if (NoError)
+            { 
+                string Answer = "";
+                string com1 =   "";
+                string targ =   "";
+                string mylastcomPosition = "";
 
-            try
-            {
-                com1 = command.Split(" ")[0];
-                mylastcomPosition = myLastCom.Split(" ")[1];
-                
-            }
-            catch (Exception)
-            {}
-
-            try
-            {
-                targ = command.Split(" ")[1];
-            }
-            catch (Exception)
-            { }
-
-            if (mylastcomPosition != "" && opponentHitStatus != "")
-            {
-                SetEnemyRadarLastHit(mylastcomPosition.ToUpper(), opponentHitStatus);
-            }
-
-            if (opponentHitStatus.Split(" ")[0] == "270" || com1 == "270")
-            {
-                WriteColor(IsHost, RCodes.ConnectionClosed.FullString);
-                return "270";
-            }
-
-
-            if (opponentHitStatus.Split(" ")[0] == "260" || com1 == "260")
-            {
-                WriteColor(IsHost, RCodes.YouWin.FullString);
-                return "260";
-            }
-
-            if (string.Equals(command.Trim(), "QUIT", StringComparison.InvariantCultureIgnoreCase) || opponentHitStatus.ToUpper() == "QUIT")
-            {
-                if (IsHost)
+                try
                 {
-                    WriteColor(!IsHost, "The client wants to quit. (press any key to continue)");
-                    Console.ReadKey();
-                    writer.WriteLine(RCodes.ConnectionClosed.FullString + " - You have quit the game.");
-                    Client.Client.Disconnect(true);
-                    WriteColor(IsHost, RCodes.YouWin.FullString + " - Client has disconnected.");
+                    com1 = command.Split(" ")[0];
+                    mylastcomPosition = myLastCom.Split(" ")[1];
+                
+                }
+                catch (Exception)
+                {}
+
+                try
+                {
+                    targ = command.Split(" ")[1];
+                }
+                catch (Exception)
+                { }
+
+                if (mylastcomPosition != "" && opponentHitStatus != "")
+                {
+                    SetEnemyRadarLastHit(mylastcomPosition.ToUpper(), opponentHitStatus);
+                }
+
+                if (opponentHitStatus.Split(" ")[0] == "270" || com1 == "270")
+                {
+                    WriteColor(IsHost, RCodes.ConnectionClosed.FullString);
                     return "270";
                 }
-                else
+
+                if (opponentHitStatus.Split(" ")[0] == "260" || com1 == "260")
                 {
                     WriteColor(IsHost, RCodes.YouWin.FullString);
-                    Answer = RCodes.SyntaxError.FullString + " (Host should quit, not client)";
+                    return "260";
                 }
-         
-            }
-            else if (string.Equals(command.Trim(), "HELP", StringComparison.InvariantCultureIgnoreCase))
-            {
-                Answer = "NO HELP FOR YOU";
-            }
-           
-            else if (string.Equals(com1, "FIRE", StringComparison.InvariantCultureIgnoreCase))
-            {
-                if (com1 !=  "" && targ != "")
+
+                if (string.Equals(command.Trim(), "QUIT", StringComparison.InvariantCultureIgnoreCase) || opponentHitStatus.ToUpper() == "QUIT")
                 {
-                    var target = OceanView.Targets.Where(t => t.GridPosition == targ.ToUpper()).FirstOrDefault();
-
-                    if (target != null)
+                    if (IsHost)
                     {
-                        if (target.IsAlreadyHit)
+                        WriteColor(!IsHost, "The client wants to quit. (press any key to continue)");
+                        Console.ReadKey();
+                        writer.WriteLine(RCodes.ConnectionClosed.FullString + " - You have quit the game.");
+                        Client.Client.Disconnect(true);
+                        WriteColor(IsHost, RCodes.YouWin.FullString + " - Client has disconnected.");
+                        return "270";
+                    }
+                    else
+                    {
+                        WriteColor(IsHost, RCodes.YouWin.FullString);
+                        Answer = RCodes.SyntaxError.FullString + " (Host should quit, not client)";
+                    }
+         
+                }
+                else if (string.Equals(command.Trim(), "HELP", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    if (NiceMode)
+                    {
+                        var help = WriteHelpForClient();
+                        writer.WriteLine(help);
+                        var newCom = reader.ReadLine();
+                        Answer = Read(newCom, opponentHitStatus, myLastCom);
+                    }
+                    else
+                    {
+                        Answer = WriteHelpForClient();
+                    }
+                
+                
+                }
+                else if (string.Equals(com1, "FIRE", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    if (com1 !=  "" && targ != "")
+                    {
+                        var target = OceanView.Targets.Where(t => t.GridPosition == targ.ToUpper()).FirstOrDefault();
+
+                        if (target != null)
                         {
-                            Answer = $"{RCodes.SequenceError.FullString} - target already hit ({targ})";
-                        }
-
-                        else if (target.HasShip)
-                        {   //kollar om träffen sänker skeppet.
-                            var isSunk = target.Ship.Hit();
-                            target.IsAlreadyHit = true;
-
-                            if (isSunk)
+                            if (target.IsAlreadyHit)
                             {
-                                if (OceanView.AllShipsAreSunk())
-                                {   //Om alla skepp har sjunkit
-                                    Answer = RCodes.YouWin.FullString;
+                                Answer = $"{RCodes.SequenceError.FullString} - target already hit ({targ})";
+                            }
+
+                            else if (target.HasShip)
+                            {   //kollar om träffen sänker skeppet.
+                                var isSunk = target.Ship.Hit();
+                                target.IsAlreadyHit = true;
+
+                                if (isSunk)
+                                {
+                                    if (OceanView.AllShipsAreSunk())
+                                    {   //Om alla skepp har sjunkit
+                                        Answer = RCodes.YouWin.FullString;
+                                    }
+                                    else
+                                    {   //om bara aktuellt skepp sjunker
+                                        Answer = target.Ship.SinkString;
+                                    }
                                 }
                                 else
-                                {   //om bara aktuellt skepp sjunker
-                                    Answer = target.Ship.SinkString;
+                                {   //Normal träff
+                                    Answer = target.Ship.HitString;
                                 }
                             }
                             else
-                            {   //Normal träff
-                                Answer = target.Ship.HitString;
+                            {
+                                Answer = RCodes.Miss.FullString;
+                                target.IsAlreadyHit = true;
                             }
                         }
                         else
                         {
-                            Answer = RCodes.Miss.FullString;
-                            target.IsAlreadyHit = true;
+                            Answer = $"{RCodes.SequenceError.FullString} - Out of grid. ({targ})";
                         }
+                    }
+                
+                }
+                else if(com1 == "HELLO" || com1 == "HELO" || com1 == "START")
+                {
+                    if (NiceMode)
+                    {
+                        writer.WriteLine(RCodes.SequenceError.FullString);
+                        var newCom = reader.ReadLine();
+                        Answer = Read(newCom, opponentHitStatus, myLastCom);
+                    }
+                }
+                else
+                {
+                    if (NiceMode)
+                    {
+                        writer.WriteLine(RCodes.SyntaxError.FullString);
+                        var newCom = reader.ReadLine();
+                        Answer = Read(newCom, opponentHitStatus, myLastCom);
                     }
                     else
                     {
-                        Answer = $"{RCodes.SequenceError.FullString} - Out of grid. ({targ})";
+                        Answer = $"{RCodes.SyntaxError.FullString}";
                     }
                 }
-                
-            }
-            else if(com1 == "HELLO" || com1 == "HELO" || com1 == "START")
-            {
-                Answer = $"{RCodes.SequenceError.FullString}";
-            }
 
-            else
-            {
-                Answer = $"{RCodes.SyntaxError.FullString}";
-            }
-
-            //Skriver ut vad motståndaren gjorde för command.
-            WriteColor(!IsHost, $"{Player2}: {command.ToUpper()}");
-
-            //Skriver ut vad motståndarens command gjorde (hit eller miss).
-            //if (!IsHost) Answer = RCodes.YouWin.FullString;
-
-            if (Answer.Split(" ")[0] == "260")
-            {
-                WriteColor(IsHost, $"{Player2} won the game! You lose...");
+                return Answer;
             }
             else
             {
-                WriteColor(IsHost, Answer);
+                WriteColor(IsHost, RCodes.ConnectionClosed.FullString);
+                writer.WriteLine(RCodes.ConnectionClosed.FullString);
+                return "270";
             }
-
-            writer.WriteLine(Answer);
-            return Answer;
         }
 
         private string Write()
@@ -583,7 +652,7 @@ namespace BattleShipServer
             string command = "";
 
             bool isOtherCommand = true;
-            while (isOtherCommand)
+            while (isOtherCommand && NoError)
             {
                 Console.Write("Send: ");
                 command = Console.ReadLine();
@@ -611,9 +680,22 @@ namespace BattleShipServer
                     Console.WriteLine("QUIT THE GAMEMOOOO");
                     isOtherCommand = false;
                 }
-                else
+                else if (command.Split(" ")[0] == "FIRE")
                 {
                     isOtherCommand = false;
+                }
+                else
+                {
+                    if (NiceMode)
+                    {
+                        //Console.WriteLine(RCodes.SyntaxError.FullString);
+                        //Error(RCodes.SyntaxError.Code, true);
+                        isOtherCommand = false;
+                    }
+                    else
+                    {
+                        isOtherCommand = false;
+                    }
                 }
             }
             return command;
@@ -704,6 +786,39 @@ namespace BattleShipServer
             Console.SetCursorPosition(0, Console.CursorTop);
         }
 
+        private string WriteHelpForClient(bool isBeginning = false)
+        {
+            var lf = (char)10;
+            var cr = (char)13;
+
+            string help = "---- - HELP----- " + lf + cr +
+                "This is a classic BattleShip game, you connect with another player," + lf + cr +
+                "and you take turns to fire." + lf + cr +
+                "This game is not case sensitive" + lf + cr +
+                "(it doesn't matter if you write 'HELP' or 'help' - or even 'hElP')." + lf + cr +
+                "After you have got a connection with another player" + lf + cr +
+                "the CLIENT have to say 'START' to start the game." + lf + cr +
+                "COMMANDS:" + lf + cr +
+                "HELLO <username>  - This is the first command a client have to use when connected." + lf + cr +
+                "START             - This is how the client starts the game after you have connected." + lf + cr +
+                "FIRE <coordinate> - When the game has started, this is the command to fire at the enemy ship." + lf + cr +
+                "                    <coordinate> have to be replaced by something between A1 to J10..." + lf + cr +
+                "                    ...example: 'FIRE C6'. Optional message after the coordinate can be applied." + lf + cr +
+                "HELP              - Shows help. Obviously you found it..." + lf + cr +
+                "QUIT              - Quits the game and disconnects from the other player." + lf + cr + lf;
+
+                help += "------------------------------------------------------------------------------------" + lf + cr;
+
+
+            if (isBeginning)
+            {
+                help += "(Client starts the game by writing 'START')" + lf + cr;
+            }
+
+            return help;
+            //writer.WriteLine(help);
+        }
+
         private void ShowHelp()
         {
             Console.WriteLine();
@@ -762,6 +877,28 @@ namespace BattleShipServer
 
             Console.ReadKey();
             Console.Clear();
+        }
+
+        public void PrintMode()
+        {
+            MiddleWL("CHOOSE MODE", true);
+            MiddleWL("(Nice mode is default)");
+            Console.WriteLine();
+            MiddleWL("[Nice mode]   - this mode lets you write another command after writing 'HELP'");
+            MiddleWL("                or unknown syntax during the game.", false, false, 14);
+            MiddleWL("[Brutal mode] - this mode will count 'HELP' or unknown syntax as your command");
+            MiddleWL("                for that round during the game.", false, false, 15);
+
+            Console.WriteLine();
+            MiddleWL("Mode: ", false, true);
+            var mode = Console.ReadLine().ToUpper();
+
+            if (mode == "B" || mode == "BRUTAL" || mode == "BRUTAL MODE" || mode == "BRUTALMODE")
+            {
+                NiceMode = false;
+            }
+            Console.Clear();
+
         }
 
         public void MiddleWL(string offset, bool isFirst = false, bool OnlyWrite = false, int extraOffset = 0)
