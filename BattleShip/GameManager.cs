@@ -158,6 +158,7 @@ namespace BattleShipServer
                 while (true)
                 {
                     MiddleWL("Väntar på att någon ska ansluta sig...");
+
                     Client = listener.AcceptTcpClient();
                     Client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, true);
                     NetworkStream = Client.GetStream();
@@ -701,7 +702,11 @@ namespace BattleShipServer
                     {
                         //Console.WriteLine(RCodes.SyntaxError.FullString);
                         //Error(RCodes.SyntaxError.Code, true);
-                        isOtherCommand = false;
+                        //isOtherCommand = false;
+                        writer.WriteLine(command);
+                        var s = reader.ReadLine();
+                        Error(s, false);
+                        Console.WriteLine(s);
                     }
                     else
                     {
@@ -1018,38 +1023,44 @@ namespace BattleShipServer
 
         public void Error(string t, bool me)
         {
-            var c = t.Substring(0, 3);
+            try
+            {
 
-            if (c == RCodes.SequenceError.Code || c == RCodes.SyntaxError.Code)
-            {
-                if (me)
+          
+                var c = t.Substring(0, 3);
+
+                if (c == RCodes.SequenceError.Code || c == RCodes.SyntaxError.Code)
                 {
-                    MyErrorCount++;
-                    if (MyErrorCount > 3)
+                    if (me)
                     {
-                        NoError = false;
+                        MyErrorCount++;
+                        if (MyErrorCount > 3)
+                        {
+                            NoError = false;
+                        }
+                    }
+                    else
+                    {
+                        ErrorCount++;
+                        if (ErrorCount >= 3)
+                        {
+                            NoError = false;
+                        }
                     }
                 }
                 else
                 {
-                    ErrorCount++;
-                    if (ErrorCount >= 3)
+                    if (me)
                     {
-                        NoError = false;
+                        MyErrorCount = 0;
+                    }
+                    else
+                    {
+                        ErrorCount = 0;
                     }
                 }
             }
-            else
-            {
-                if (me)
-                {
-                    MyErrorCount = 0;
-                }
-                else
-                {
-                    ErrorCount = 0;
-                }
-            }
+            catch { }
         }
     }
 }
